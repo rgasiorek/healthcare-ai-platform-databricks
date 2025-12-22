@@ -1,179 +1,412 @@
-# SQL Notebook to create Delta tables with schema definitions
-resource "databricks_notebook" "create_tables" {
-  path     = "/Shared/setup-delta-tables"
-  language = "SQL"
-  content_base64 = base64encode(<<-EOT
-    -- Databricks notebook source
-    -- MAGIC %md
-    -- MAGIC # Healthcare Delta Lake Table Definitions (Hive Metastore)
-    -- MAGIC
-    -- MAGIC This notebook creates Delta Lake tables using the default Hive metastore.
-    -- MAGIC
-    -- MAGIC **Note**: Using Hive metastore instead of Unity Catalog (no AWS S3 setup required)
-    -- MAGIC
-    -- MAGIC **Table Organization:**
-    -- MAGIC - Bronze tables: Raw Kaggle data (prefix: bronze_)
-    -- MAGIC - Silver tables: Cleaned metadata (prefix: silver_)
-    -- MAGIC - Gold tables: ML results and aggregations (prefix: gold_)
+# Production-ready Delta Tables for Healthcare X-ray Analysis
+# Issue #2: Implement Delta tables with proper schemas using Terraform
+# Using Unity Catalog (not Hive metastore)
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Bronze Layer: Kaggle Dataset Metadata
+# Bronze Layer Tables - Raw data from Kaggle
 
-    -- COMMAND ----------
-    CREATE TABLE IF NOT EXISTS bronze_kaggle_dataset_info (
-      dataset_name STRING COMMENT 'Name of the Kaggle dataset',
-      dataset_version STRING COMMENT 'Version or download timestamp',
-      source_url STRING COMMENT 'Kaggle dataset URL',
-      total_files INT COMMENT 'Total number of files downloaded',
-      total_size_bytes BIGINT COMMENT 'Total size in bytes',
-      download_timestamp TIMESTAMP COMMENT 'When the dataset was downloaded',
-      checksum STRING COMMENT 'Dataset checksum for validation'
-    )
-    USING DELTA
-    COMMENT 'Metadata about ingested Kaggle datasets'
-    TBLPROPERTIES (
-      'delta.enableChangeDataFeed' = 'true',
-      'quality' = 'bronze'
-    );
+# Table: Bronze - Kaggle X-ray metadata
+resource "databricks_sql_table" "bronze_kaggle_metadata" {
+  name               = "kaggle_xray_metadata"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.bronze.name
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.bronze.url}/kaggle_xray_metadata"
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Silver Layer: X-ray Image Metadata
+  comment = "Raw X-ray image metadata from Kaggle Pneumonia dataset"
 
-    -- COMMAND ----------
-    CREATE TABLE IF NOT EXISTS silver_xray_metadata (
-      image_id STRING COMMENT 'Unique identifier for each X-ray image',
-      file_path STRING COMMENT 'Path to image file in DBFS volume',
-      label STRING COMMENT 'Classification label: NORMAL or PNEUMONIA',
-      dataset_split STRING COMMENT 'train, test, or validation',
-      image_width INT COMMENT 'Image width in pixels',
-      image_height INT COMMENT 'Image height in pixels',
-      image_size_bytes BIGINT COMMENT 'File size in bytes',
-      image_format STRING COMMENT 'File format (e.g., JPEG, PNG)',
-      ingestion_timestamp TIMESTAMP COMMENT 'When the record was created',
-      source_dataset STRING COMMENT 'Source Kaggle dataset name'
-    )
-    USING DELTA
-    PARTITIONED BY (label, dataset_split)
-    COMMENT 'Metadata for all X-ray images with labels and file information'
-    TBLPROPERTIES (
-      'delta.enableChangeDataFeed' = 'true',
-      'delta.autoOptimize.optimizeWrite' = 'true',
-      'delta.autoOptimize.autoCompact' = 'true',
-      'quality' = 'silver'
-    );
+  column {
+    name     = "image_id"
+    type     = "STRING"
+    comment  = "Unique identifier for X-ray image"
+  }
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Silver Layer: Image Features (for ML)
+  column {
+    name     = "filename"
+    type     = "STRING"
+    comment  = "Original filename from Kaggle"
+  }
 
-    -- COMMAND ----------
-    CREATE TABLE IF NOT EXISTS silver_image_features (
-      image_id STRING COMMENT 'Links to xray_metadata.image_id',
-      feature_vector ARRAY<DOUBLE> COMMENT 'Extracted feature vector from pre-trained model',
-      feature_extraction_model STRING COMMENT 'Model used for feature extraction',
-      extraction_timestamp TIMESTAMP COMMENT 'When features were extracted',
-      image_mean_intensity DOUBLE COMMENT 'Mean pixel intensity',
-      image_std_intensity DOUBLE COMMENT 'Standard deviation of pixel intensity',
-      contrast_ratio DOUBLE COMMENT 'Image contrast metric'
-    )
-    USING DELTA
-    COMMENT 'Extracted features from X-ray images for ML modeling'
-    TBLPROPERTIES (
-      'delta.enableChangeDataFeed' = 'true',
-      'quality' = 'silver'
-    );
+  column {
+    name     = "category"
+    type     = "STRING"
+    comment  = "Image category: NORMAL or PNEUMONIA"
+  }
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Gold Layer: ML Model Predictions
+  column {
+    name     = "dataset_split"
+    type     = "STRING"
+    comment  = "train, test, or val split"
+  }
 
-    -- COMMAND ----------
-    CREATE TABLE IF NOT EXISTS gold_pneumonia_predictions (
-      prediction_id STRING COMMENT 'Unique prediction identifier',
-      image_id STRING COMMENT 'Links to xray_metadata.image_id',
-      actual_label STRING COMMENT 'Ground truth label',
-      predicted_label STRING COMMENT 'Model prediction: NORMAL or PNEUMONIA',
-      prediction_probability DOUBLE COMMENT 'Confidence score (0-1)',
-      model_name STRING COMMENT 'Name of the ML model used',
-      model_version STRING COMMENT 'Version of the model',
-      prediction_timestamp TIMESTAMP COMMENT 'When prediction was made',
-      is_correct BOOLEAN COMMENT 'Whether prediction matches actual label'
-    )
-    USING DELTA
-    PARTITIONED BY (predicted_label)
-    COMMENT 'ML model predictions with confidence scores and validation'
-    TBLPROPERTIES (
-      'delta.enableChangeDataFeed' = 'true',
-      'quality' = 'gold'
-    );
+  column {
+    name     = "file_path"
+    type     = "STRING"
+    comment  = "Path to image file in volume"
+  }
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Gold Layer: Model Performance Metrics
+  column {
+    name     = "file_size_bytes"
+    type     = "BIGINT"
+    comment  = "File size in bytes"
+  }
 
-    -- COMMAND ----------
-    CREATE TABLE IF NOT EXISTS gold_model_performance (
-      model_name STRING COMMENT 'Name of the ML model',
-      model_version STRING COMMENT 'Version of the model',
-      evaluation_date DATE COMMENT 'When the model was evaluated',
-      accuracy DOUBLE COMMENT 'Overall accuracy',
-      precision DOUBLE COMMENT 'Precision score',
-      recall DOUBLE COMMENT 'Recall score',
-      f1_score DOUBLE COMMENT 'F1 score',
-      auc_roc DOUBLE COMMENT 'Area under ROC curve',
-      true_positives INT COMMENT 'Count of true positives',
-      true_negatives INT COMMENT 'Count of true negatives',
-      false_positives INT COMMENT 'Count of false positives',
-      false_negatives INT COMMENT 'Count of false negatives',
-      total_predictions INT COMMENT 'Total number of predictions evaluated'
-    )
-    USING DELTA
-    COMMENT 'Performance metrics for ML models over time'
-    TBLPROPERTIES (
-      'delta.enableChangeDataFeed' = 'true',
-      'quality' = 'gold'
-    );
+  column {
+    name     = "ingested_at"
+    type     = "TIMESTAMP"
+    comment  = "Timestamp when data was ingested"
+  }
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Gold Layer: Dataset Summary View
+  column {
+    name     = "ingestion_batch_id"
+    type     = "STRING"
+    comment  = "Batch ID for tracking ingestion runs"
+  }
 
-    -- COMMAND ----------
-    CREATE OR REPLACE VIEW gold_dataset_summary AS
-    SELECT
-      label,
-      dataset_split,
-      COUNT(*) as image_count,
-      AVG(image_size_bytes) as avg_size_bytes,
-      MIN(ingestion_timestamp) as first_ingested,
-      MAX(ingestion_timestamp) as last_ingested
-    FROM silver_xray_metadata
-    GROUP BY label, dataset_split
-    COMMENT 'Summary statistics of the X-ray dataset';
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.minReaderVersion"               = "1"
+    "delta.minWriterVersion"               = "2"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
 
-    -- COMMAND ----------
-    -- MAGIC %md
-    -- MAGIC ## Verify Table Creation
-
-    -- COMMAND ----------
-    -- Show all tables in default database
-    SHOW TABLES;
-
-    -- COMMAND ----------
-    -- Filter to show only our healthcare tables
-    SHOW TABLES LIKE '*xray*';
-
-    -- COMMAND ----------
-    -- Display table properties
-    DESCRIBE EXTENDED silver_xray_metadata;
-  EOT
-  )
+  depends_on = [databricks_external_location.bronze]
 }
 
-# Output table setup notebook
-output "tables_notebook_path" {
-  value       = databricks_notebook.create_tables.path
-  description = "Path to Delta tables setup notebook"
+# Silver Layer Tables - Cleaned and enriched data
+
+# Table: Silver - X-ray metadata (MVP version)
+resource "databricks_sql_table" "silver_xray_metadata" {
+  name               = "xray_metadata"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.silver.name
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.silver.url}/xray_metadata"
+
+  comment = "X-ray metadata with validation and quality checks (silver layer)"
+
+  column {
+    name     = "image_id"
+    type     = "STRING"
+    comment  = "Unique identifier for X-ray image"
+  }
+
+  column {
+    name     = "label"
+    type     = "INT"
+    comment  = "Binary label: 0=NORMAL, 1=PNEUMONIA"
+  }
+
+  column {
+    name     = "label_name"
+    type     = "STRING"
+    comment  = "Human-readable label"
+  }
+
+  column {
+    name     = "dataset_split"
+    type     = "STRING"
+    comment  = "train, test, or val split"
+  }
+
+  column {
+    name     = "file_path"
+    type     = "STRING"
+    comment  = "Validated path to image file"
+  }
+
+  column {
+    name     = "image_width"
+    type     = "INT"
+    comment  = "Image width in pixels"
+  }
+
+  column {
+    name     = "image_height"
+    type     = "INT"
+    comment  = "Image height in pixels"
+  }
+
+  column {
+    name     = "quality_score"
+    type     = "DOUBLE"
+    comment  = "Image quality score (0-1)"
+  }
+
+  column {
+    name     = "processed_at"
+    type     = "TIMESTAMP"
+    comment  = "Timestamp when data was processed"
+  }
+
+  column {
+    name     = "source_batch_id"
+    type     = "STRING"
+    comment  = "Reference to bronze batch ID"
+  }
+
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.autoOptimize.optimizeWrite"     = "true"
+    "delta.autoOptimize.autoCompact"       = "true"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
+
+  depends_on = [databricks_external_location.silver]
+}
+
+# Table: Silver - Image features
+resource "databricks_sql_table" "silver_image_features" {
+  name               = "image_features"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.silver.name
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.silver.url}/image_features"
+
+  comment = "Extracted features from X-ray images for ML training"
+
+  column {
+    name     = "image_id"
+    type     = "STRING"
+    comment  = "Foreign key to silver.xray_metadata"
+  }
+
+  column {
+    name     = "feature_vector"
+    type     = "ARRAY<DOUBLE>"
+    comment  = "Extracted feature vector from CNN"
+  }
+
+  column {
+    name     = "feature_extraction_model"
+    type     = "STRING"
+    comment  = "Name/version of feature extraction model"
+  }
+
+  column {
+    name     = "mean_pixel_value"
+    type     = "DOUBLE"
+    comment  = "Mean pixel intensity"
+  }
+
+  column {
+    name     = "std_pixel_value"
+    type     = "DOUBLE"
+    comment  = "Standard deviation of pixel intensity"
+  }
+
+  column {
+    name     = "extracted_at"
+    type     = "TIMESTAMP"
+    comment  = "Timestamp when features were extracted"
+  }
+
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
+
+  depends_on = [databricks_external_location.silver]
+}
+
+# Gold Layer Tables - Business-ready ML outputs
+
+# Table: Gold - Pneumonia predictions
+resource "databricks_sql_table" "gold_predictions" {
+  name               = "pneumonia_predictions"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.gold.name
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.gold.url}/pneumonia_predictions"
+
+  comment = "ML model predictions for pneumonia classification"
+
+  column {
+    name     = "prediction_id"
+    type     = "STRING"
+    comment  = "Unique identifier for prediction"
+  }
+
+  column {
+    name     = "image_id"
+    type     = "STRING"
+    comment  = "Foreign key to silver.xray_metadata"
+  }
+
+  column {
+    name     = "predicted_label"
+    type     = "INT"
+    comment  = "Predicted label: 0=NORMAL, 1=PNEUMONIA"
+  }
+
+  column {
+    name     = "prediction_probability"
+    type     = "DOUBLE"
+    comment  = "Probability of pneumonia (0-1)"
+  }
+
+  column {
+    name     = "confidence_score"
+    type     = "DOUBLE"
+    comment  = "Model confidence in prediction (0-1)"
+  }
+
+  column {
+    name     = "true_label"
+    type     = "INT"
+    comment  = "Actual label for validation"
+  }
+
+  column {
+    name     = "is_correct"
+    type     = "BOOLEAN"
+    comment  = "Whether prediction matches true label"
+  }
+
+  column {
+    name     = "model_name"
+    type     = "STRING"
+    comment  = "Name of ML model used"
+  }
+
+  column {
+    name     = "model_version"
+    type     = "STRING"
+    comment  = "Version of ML model"
+  }
+
+  column {
+    name     = "predicted_at"
+    type     = "TIMESTAMP"
+    comment  = "Timestamp when prediction was made"
+  }
+
+  column {
+    name     = "prediction_date"
+    type     = "DATE"
+    comment  = "Date partition for predictions"
+  }
+
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
+
+  depends_on = [databricks_external_location.gold]
+}
+
+# Table: Gold - Model performance metrics
+resource "databricks_sql_table" "gold_model_performance" {
+  name               = "model_performance"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.gold.name
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.gold.url}/model_performance"
+
+  comment = "Model performance metrics and evaluation results"
+
+  column {
+    name     = "evaluation_id"
+    type     = "STRING"
+    comment  = "Unique identifier for evaluation run"
+  }
+
+  column {
+    name     = "model_name"
+    type     = "STRING"
+    comment  = "Name of ML model"
+  }
+
+  column {
+    name     = "model_version"
+    type     = "STRING"
+    comment  = "Version of ML model"
+  }
+
+  column {
+    name     = "dataset_split"
+    type     = "STRING"
+    comment  = "Dataset used: train, test, or val"
+  }
+
+  column {
+    name     = "accuracy"
+    type     = "DOUBLE"
+    comment  = "Overall accuracy"
+  }
+
+  column {
+    name     = "precision"
+    type     = "DOUBLE"
+    comment  = "Precision score"
+  }
+
+  column {
+    name     = "recall"
+    type     = "DOUBLE"
+    comment  = "Recall score"
+  }
+
+  column {
+    name     = "f1_score"
+    type     = "DOUBLE"
+    comment  = "F1 score"
+  }
+
+  column {
+    name     = "auc_roc"
+    type     = "DOUBLE"
+    comment  = "Area under ROC curve"
+  }
+
+  column {
+    name     = "confusion_matrix"
+    type     = "STRING"
+    comment  = "Confusion matrix as JSON"
+  }
+
+  column {
+    name     = "total_samples"
+    type     = "BIGINT"
+    comment  = "Total number of samples evaluated"
+  }
+
+  column {
+    name     = "evaluated_at"
+    type     = "TIMESTAMP"
+    comment  = "Timestamp when evaluation was run"
+  }
+
+  column {
+    name     = "evaluation_date"
+    type     = "DATE"
+    comment  = "Date partition for evaluations"
+  }
+
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
+
+  depends_on = [databricks_external_location.gold]
+}
+
+# Outputs for table references
+output "bronze_table_full_name" {
+  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.bronze.name}.${databricks_sql_table.bronze_kaggle_metadata.name}"
+  description = "Full name of bronze kaggle metadata table"
+}
+
+output "silver_xray_table_full_name" {
+  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.silver.name}.${databricks_sql_table.silver_xray_metadata.name}"
+  description = "Full name of silver X-ray metadata table"
+}
+
+output "gold_predictions_table_full_name" {
+  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.gold.name}.${databricks_sql_table.gold_predictions.name}"
+  description = "Full name of gold predictions table"
 }
