@@ -1,14 +1,6 @@
 # IAM Role and Policies for Databricks Unity Catalog Access to S3
 # This creates a cross-account IAM role that Databricks can assume
 
-# Data source for Databricks account (you'll need to provide this)
-# Get this from: Databricks Console → Account Settings → Account ID
-variable "databricks_account_id" {
-  description = "Databricks Account ID (from Account Console)"
-  type        = string
-  default     = "5ed6b530-dbbf-4911-99df-b16b7863f1ef"  # From your earlier workspace URL
-}
-
 # IAM Policy Document: Trust relationship allowing Databricks to assume this role
 # AND allowing the role to assume itself (required for Unity Catalog)
 data "aws_iam_policy_document" "databricks_assume_role" {
@@ -132,15 +124,4 @@ resource "aws_iam_role_policy" "healthcare_data_s3" {
   name   = "healthcare-data-s3-access"
   role   = aws_iam_role.healthcare_data_access.id
   policy = data.aws_iam_policy_document.healthcare_data_s3.json
-}
-
-# Outputs
-output "metastore_iam_role_arn" {
-  value       = aws_iam_role.unity_catalog_metastore.arn
-  description = "IAM Role ARN for Unity Catalog Metastore"
-}
-
-output "data_access_iam_role_arn" {
-  value       = aws_iam_role.healthcare_data_access.arn
-  description = "IAM Role ARN for Healthcare Data Access"
 }
