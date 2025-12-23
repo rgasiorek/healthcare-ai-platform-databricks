@@ -7,14 +7,30 @@
 # MAGIC **Dataset**: [Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)
 # MAGIC
 # MAGIC **Pipeline Steps**:
-# MAGIC 1. Download data from Kaggle using API credentials
-# MAGIC 2. Extract and organize files in Unity Catalog Volume
-# MAGIC 3. Create metadata records in Bronze Delta table
-# MAGIC 4. Validate data quality
+# MAGIC 1. Install Kaggle API and restart Python
+# MAGIC 2. Set credentials and download data from Kaggle
+# MAGIC 3. Extract and organize files in Unity Catalog Volume
+# MAGIC 4. Create metadata records in Bronze Delta table
+# MAGIC 5. Validate data quality
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Setup and Configuration
+# MAGIC ## Step 1: Install Kaggle API
+
+# COMMAND ----------
+# Install Kaggle API
+%pip install kaggle --quiet
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 2: Restart Python (Required after pip install)
+
+# COMMAND ----------
+dbutils.library.restartPython()
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 3: Setup Configuration and Kaggle Credentials
 
 # COMMAND ----------
 import os
@@ -22,14 +38,6 @@ import json
 from datetime import datetime
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-
-# Get Kaggle credentials from Databricks Secrets
-kaggle_username = dbutils.secrets.get(scope="kaggle", key="username")
-kaggle_token = dbutils.secrets.get(scope="kaggle", key="token")
-
-# Set Kaggle environment variables
-os.environ['KAGGLE_USERNAME'] = kaggle_username
-os.environ['KAGGLE_KEY'] = kaggle_token
 
 # Configuration
 DATASET_NAME = "paultimothymooney/chest-xray-pneumonia"
@@ -41,23 +49,25 @@ DOWNLOAD_PATH = "/tmp/kaggle_download"
 BATCH_ID = datetime.now().strftime('%Y%m%d_%H%M%S')
 MAX_IMAGES = 1000  # Limit to 1000 images for demo (500 per class)
 
+# Get Kaggle credentials from Databricks Secrets (AFTER restart!)
+kaggle_username = dbutils.secrets.get(scope="kaggle", key="username")
+kaggle_token = dbutils.secrets.get(scope="kaggle", key="token")
+
+# Set Kaggle environment variables
+os.environ['KAGGLE_USERNAME'] = kaggle_username
+os.environ['KAGGLE_KEY'] = kaggle_token
+
 print(f"Configuration:")
 print(f"  Dataset: {DATASET_NAME}")
 print(f"  Catalog: {CATALOG}")
 print(f"  Volume Path: {VOLUME_PATH}")
 print(f"  Batch ID: {BATCH_ID}")
 print(f"  Max Images: {MAX_IMAGES}")
+print(f"  Kaggle User: {kaggle_username}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 1: Install Kaggle API and Download Dataset
-
-# COMMAND ----------
-# Install Kaggle API
-%pip install kaggle --quiet
-
-# COMMAND ----------
-dbutils.library.restartPython()
+# MAGIC ## Step 4: Download Dataset from Kaggle
 
 # COMMAND ----------
 import kaggle
@@ -81,7 +91,7 @@ print("Download complete!")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 2: Explore Downloaded Files
+# MAGIC ## Step 5: Explore Downloaded Files
 
 # COMMAND ----------
 # List downloaded files
@@ -89,7 +99,7 @@ dbutils.fs.ls(f"file:{DOWNLOAD_PATH}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 3: Organize and Copy Files to Volume (Sample)
+# MAGIC ## Step 6: Organize and Copy Files to Unity Catalog Volume (Sample)
 
 # COMMAND ----------
 import shutil
@@ -145,7 +155,7 @@ print(f"\nTotal images copied: {normal_count + pneumonia_count}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 4: Create Metadata and Load into Bronze Delta Lake Table
+# MAGIC ## Step 7: Create Metadata and Load into Bronze Delta Lake Table
 
 # COMMAND ----------
 from pyspark.sql.types import StructType, StructField, StringType, LongType, TimestampType
@@ -209,7 +219,7 @@ print(f"   Batch ID: {BATCH_ID}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 5: Validation and Summary
+# MAGIC ## Step 8: Validation and Summary
 
 # COMMAND ----------
 # Query the bronze data we just loaded
