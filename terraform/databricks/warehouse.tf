@@ -23,18 +23,5 @@ resource "databricks_sql_endpoint" "healthcare_warehouse" {
 }
 
 # Output warehouse information
-output "warehouse_id" {
-  value       = databricks_sql_endpoint.healthcare_warehouse.id
-  description = "Serverless SQL Warehouse ID"
-}
 
-output "warehouse_url" {
-  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/sql/warehouses/${databricks_sql_endpoint.healthcare_warehouse.id}"
-  description = "Direct URL to SQL warehouse"
-}
 
-output "warehouse_jdbc_url" {
-  value       = databricks_sql_endpoint.healthcare_warehouse.jdbc_url
-  description = "JDBC connection string for SQL warehouse"
-  sensitive   = true
-}

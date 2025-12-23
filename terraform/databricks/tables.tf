@@ -396,17 +396,5 @@ resource "databricks_sql_table" "gold_model_performance" {
 }
 
 # Outputs for table references
-output "bronze_table_full_name" {
-  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.bronze.name}.${databricks_sql_table.bronze_kaggle_metadata.name}"
-  description = "Full name of bronze kaggle metadata table"
-}
 
-output "silver_xray_table_full_name" {
-  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.silver.name}.${databricks_sql_table.silver_xray_metadata.name}"
-  description = "Full name of silver X-ray metadata table"
-}
 
-output "gold_predictions_table_full_name" {
-  value       = "${databricks_catalog.healthcare.name}.${databricks_schema.gold.name}.${databricks_sql_table.gold_predictions.name}"
-  description = "Full name of gold predictions table"
-}

@@ -1,11 +1,14 @@
 # Unity Catalog Configuration with AWS S3 Storage
 # IAM roles created successfully - now creating full Unity Catalog setup
 
+# Data source for AWS region
+data "aws_region" "current" {}
+
 # Storage Credential for Unity Catalog Metastore
 resource "databricks_storage_credential" "unity_catalog_metastore" {
   name = "unity-catalog-metastore-credential-${var.environment}"
   aws_iam_role {
-    role_arn = aws_iam_role.unity_catalog_metastore.arn
+    role_arn = var.metastore_iam_role_arn
   }
   comment = "Storage credential for Unity Catalog metastore S3 bucket (${var.environment})"
 }
@@ -13,7 +16,7 @@ resource "databricks_storage_credential" "unity_catalog_metastore" {
 # Unity Catalog Metastore - NEW metastore with S3 storage
 resource "databricks_metastore" "healthcare" {
   name          = "healthcare-metastore-${var.environment}-${data.aws_region.current.name}"
-  storage_root  = "s3://${aws_s3_bucket.unity_catalog_metastore.id}/metastore"
+  storage_root  = "s3://${var.unity_catalog_bucket_id}/metastore"
   owner         = "account users"
   region        = data.aws_region.current.name
   force_destroy = true  # For dev environment
@@ -29,7 +32,7 @@ resource "databricks_metastore_assignment" "workspace" {
 resource "databricks_storage_credential" "healthcare_data" {
   name = "healthcare-data-lake-credential-${var.environment}"
   aws_iam_role {
-    role_arn = aws_iam_role.healthcare_data_access.arn
+    role_arn = var.data_access_iam_role_arn
   }
   comment = "Storage credential for healthcare data lake S3 bucket (${var.environment})"
   depends_on = [databricks_metastore_assignment.workspace]
@@ -38,7 +41,7 @@ resource "databricks_storage_credential" "healthcare_data" {
 # External Location for Bronze Layer (Raw Data)
 resource "databricks_external_location" "bronze" {
   name            = "healthcare-bronze-${var.environment}"
-  url             = "s3://${aws_s3_bucket.healthcare_data.id}/bronze"
+  url             = "s3://${var.healthcare_data_bucket_id}/bronze"
   credential_name = databricks_storage_credential.healthcare_data.id
   comment         = "Bronze layer: Raw healthcare data from Kaggle (${var.environment})"
   depends_on      = [databricks_metastore_assignment.workspace]
@@ -47,7 +50,7 @@ resource "databricks_external_location" "bronze" {
 # External Location for Silver Layer (Cleaned Data)
 resource "databricks_external_location" "silver" {
   name            = "healthcare-silver-${var.environment}"
-  url             = "s3://${aws_s3_bucket.healthcare_data.id}/silver"
+  url             = "s3://${var.healthcare_data_bucket_id}/silver"
   credential_name = databricks_storage_credential.healthcare_data.id
   comment         = "Silver layer: Cleaned and transformed healthcare data (${var.environment})"
   depends_on      = [databricks_metastore_assignment.workspace]
@@ -56,7 +59,7 @@ resource "databricks_external_location" "silver" {
 # External Location for Gold Layer (Business-Ready Data)
 resource "databricks_external_location" "gold" {
   name            = "healthcare-gold-${var.environment}"
-  url             = "s3://${aws_s3_bucket.healthcare_data.id}/gold"
+  url             = "s3://${var.healthcare_data_bucket_id}/gold"
   credential_name = databricks_storage_credential.healthcare_data.id
   comment         = "Gold layer: Business-ready healthcare analytics (${var.environment})"
   depends_on      = [databricks_metastore_assignment.workspace]
@@ -119,32 +122,8 @@ resource "databricks_volume" "xray_images" {
 }
 
 # Outputs
-output "metastore_id" {
-  value       = databricks_metastore.healthcare.id
-  description = "Unity Catalog Metastore ID"
-}
 
-output "catalog_name" {
-  value       = databricks_catalog.healthcare.name
-  description = "Healthcare catalog name"
-}
 
-output "volume_path" {
-  value       = "/Volumes/${databricks_catalog.healthcare.name}/${databricks_schema.bronze.name}/${databricks_volume.xray_images.name}"
-  description = "Path to X-ray images volume"
-}
 
-output "bronze_external_location" {
-  value       = databricks_external_location.bronze.url
-  description = "S3 URL for Bronze layer"
-}
 
-output "silver_external_location" {
-  value       = databricks_external_location.silver.url
-  description = "S3 URL for Silver layer"
-}
 
-output "gold_external_location" {
-  value       = databricks_external_location.gold.url
-  description = "S3 URL for Gold layer"
-}

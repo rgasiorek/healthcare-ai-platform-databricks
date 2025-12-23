@@ -26,12 +26,4 @@ resource "databricks_cluster" "healthcare_compute" {
 }
 
 # Output cluster information
-output "cluster_id" {
-  value       = databricks_cluster.healthcare_compute.id
-  description = "Healthcare compute cluster ID"
-}
 
-output "cluster_url" {
-  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/#setting/clusters/${databricks_cluster.healthcare_compute.id}/configuration"
-  description = "Direct URL to cluster configuration"
-}

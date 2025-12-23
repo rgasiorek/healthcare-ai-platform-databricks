@@ -118,24 +118,3 @@ resource "aws_s3_bucket_public_access_block" "healthcare_data" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-# Outputs
-output "unity_catalog_bucket_name" {
-  value       = aws_s3_bucket.unity_catalog_metastore.id
-  description = "S3 bucket name for Unity Catalog metastore"
-}
-
-output "unity_catalog_bucket_arn" {
-  value       = aws_s3_bucket.unity_catalog_metastore.arn
-  description = "S3 bucket ARN for Unity Catalog metastore"
-}
-
-output "healthcare_data_bucket_name" {
-  value       = aws_s3_bucket.healthcare_data.id
-  description = "S3 bucket name for healthcare data lake"
-}
-
-output "healthcare_data_bucket_arn" {
-  value       = aws_s3_bucket.healthcare_data.arn
-  description = "S3 bucket ARN for healthcare data lake"
-}
