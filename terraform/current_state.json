@@ -1,0 +1,286 @@
+{
+  "version": 4,
+  "terraform_version": "1.6.6",
+  "serial": 172,
+  "lineage": "cece71c6-b3cc-523a-fa62-e274af456c80",
+  "outputs": {
+    "aws_account_id": {
+      "value": "905418100642",
+      "type": "string"
+    },
+    "aws_region": {
+      "value": "eu-central-1",
+      "type": "string"
+    },
+    "bronze_external_location": {
+      "value": "s3://healthcare-data-lake-dev/bronze",
+      "type": "string"
+    },
+    "bronze_table_full_name": {
+      "value": "healthcare_catalog_dev.bronze.kaggle_xray_metadata",
+      "type": "string"
+    },
+    "catalog_name": {
+      "value": "healthcare_catalog_dev",
+      "type": "string"
+    },
+    "cluster_id": {
+      "value": "1218-193430-muiftfrg",
+      "type": "string"
+    },
+    "cluster_url": {
+      "value": "https://dbc-68a1cdfa-43b8.cloud.databricks.com/#setting/clusters/1218-193430-muiftfrg/configuration",
+      "type": "string"
+    },
+    "data_access_iam_role_arn": {
+      "value": "arn:aws:iam::905418100642:role/databricks-healthcare-data-access-dev",
+      "type": "string"
+    },
+    "gold_external_location": {
+      "value": "s3://healthcare-data-lake-dev/gold",
+      "type": "string"
+    },
+    "gold_predictions_table_full_name": {
+      "value": "healthcare_catalog_dev.gold.pneumonia_predictions",
+      "type": "string"
+    },
+    "healthcare_data_bucket_name": {
+      "value": "healthcare-data-lake-dev",
+      "type": "string"
+    },
+    "ingestion_notebook_path": {
+      "value": "/Shared/ingest-kaggle-xray-data",
+      "type": "string"
+    },
+    "metastore_iam_role_arn": {
+      "value": "arn:aws:iam::905418100642:role/databricks-unity-catalog-metastore-dev",
+      "type": "string"
+    },
+    "metastore_id": {
+      "value": "800f743a-0f9f-48a9-8fc5-d19b8e4062a8",
+      "type": "string"
+    },
+    "silver_external_location": {
+      "value": "s3://healthcare-data-lake-dev/silver",
+      "type": "string"
+    },
+    "silver_xray_table_full_name": {
+      "value": "healthcare_catalog_dev.silver.xray_metadata",
+      "type": "string"
+    },
+    "unity_catalog_bucket_name": {
+      "value": "healthcare-databricks-unity-catalog-dev",
+      "type": "string"
+    },
+    "volume_path": {
+      "value": "/Volumes/healthcare_catalog_dev/bronze/xray_images",
+      "type": "string"
+    },
+    "warehouse_id": {
+      "value": "fc790ea551e58db4",
+      "type": "string"
+    },
+    "warehouse_url": {
+      "value": "https://dbc-68a1cdfa-43b8.cloud.databricks.com/sql/warehouses/fc790ea551e58db4",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "healthcare_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acceleration_status": "",
+            "acl": null,
+            "arn": "arn:aws:s3:::healthcare-data-lake-dev",
+            "bucket": "healthcare-data-lake-dev",
+            "bucket_domain_name": "healthcare-data-lake-dev.s3.amazonaws.com",
+            "bucket_prefix": "",
+            "bucket_regional_domain_name": "healthcare-data-lake-dev.s3.eu-central-1.amazonaws.com",
+            "cors_rule": [],
+            "force_destroy": false,
+            "grant": [
+              {
+                "id": "4c04c2cce831bca190d85c460cb63d3d0cf4683c4c95efe5645797665844b312",
+                "permissions": [
+                  "FULL_CONTROL"
+                ],
+                "type": "CanonicalUser",
+                "uri": ""
+              }
+            ],
+            "hosted_zone_id": "Z21DNDUVLTQW6Q",
+            "id": "healthcare-data-lake-dev",
+            "lifecycle_rule": [],
+            "logging": [],
+            "object_lock_configuration": [],
+            "object_lock_enabled": false,
+            "policy": "",
+            "region": "eu-central-1",
+            "replication_configuration": [],
+            "request_payer": "BucketOwner",
+            "server_side_encryption_configuration": [
+              {
+                "rule": [
+                  {
+                    "apply_server_side_encryption_by_default": [
+                      {
+                        "kms_master_key_id": "",
+                        "sse_algorithm": "AES256"
+                      }
+                    ],
+                    "bucket_key_enabled": false
+                  }
+                ]
+              }
+            ],
+            "tags": {
+              "Environment": "dev",
+              "Name": "Healthcare Data Lake",
+              "Purpose": "data-lake-storage"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "Healthcare Data Lake",
+              "Project": "healthcare-ai",
+              "Purpose": "data-lake-storage"
+            },
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": true,
+                "mfa_delete": false
+              }
+            ],
+            "website": [],
+            "website_domain": null,
+            "website_endpoint": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.aws",
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "905418100642",
+            "arn": "arn:aws:sts::905418100642:assumed-role/AWSReservedSSO_DevAdmin_cb62a5f7ff48dcc8/radoslaw.gasiorek@montrosesoftware.com",
+            "id": "905418100642",
+            "user_id": "AROA5FTY7Z6RJ2PKILQOY:radoslaw.gasiorek@montrosesoftware.com"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "module": "module.aws",
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "databricks_assume_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "3547513083",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Sid\": \"DatabricksAssumeRole\",\n      \"Effect\": \"Allow\",\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"AWS\": \"arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL\"\n      },\n      \"Condition\": {\n        \"StringEquals\": {\n          \"sts:ExternalId\": \"5ed6b530-dbbf-4911-99df-b16b7863f1ef\"\n        }\n      }\n    },\n    {\n      \"Sid\": \"SelfAssumeRole\",\n      \"Effect\": \"Allow\",\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"AWS\": [\n          \"arn:aws:iam::905418100642:role/databricks-unity-catalog-metastore-dev\",\n          \"arn:aws:iam::905418100642:role/databricks-healthcare-data-access-dev\"\n        ]\n      }\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"DatabricksAssumeRole\",\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"AWS\":\"arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL\"},\"Condition\":{\"StringEquals\":{\"sts:ExternalId\":\"5ed6b530-dbbf-4911-99df-b16b7863f1ef\"}}},{\"Sid\":\"SelfAssumeRole\",\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"AWS\":[\"arn:aws:iam::905418100642:role/databricks-unity-catalog-metastore-dev\",\"arn:aws:iam::905418100642:role/databricks-healthcare-data-access-dev\"]}}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "sts:AssumeRole"
+                ],
+                "condition": [
+                  {
+                    "test": "StringEquals",
+                    "values": [
+                      "5ed6b530-dbbf-4911-99df-b16b7863f1ef"
+                    ],
+                    "variable": "sts:ExternalId"
+                  }
+                ],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [
+                  {
+                    "identifiers": [
+                      "arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL"
+                    ],
+                    "type": "AWS"
+                  }
+                ],
+                "resources": [],
+                "sid": "DatabricksAssumeRole"
+              },
+              {
+                "actions": [
+                  "sts:AssumeRole"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [
+                  {
+                    "identifiers": [
+                      "arn:aws:iam::905418100642:role/databricks-healthcare-data-access-dev",
+                      "arn:aws:iam::905418100642:role/databricks-unity-catalog-metastore-dev"
+                    ],
+                    "type": "AWS"
+                  }
+                ],
+                "resources": [],
+                "sid": "SelfAssumeRole"
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "module": "module.aws",
+      "mode": "data",
+      "type": "aws_region",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "Europe (Frankfurt)",
+            "endpoint": "ec2.eu-central-1.amazonaws.com",
+            "id": "eu-central-1",
+            "name": "eu-central-1"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
+

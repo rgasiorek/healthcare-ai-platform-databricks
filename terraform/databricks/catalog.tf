@@ -11,6 +11,7 @@ resource "databricks_storage_credential" "unity_catalog_metastore" {
     role_arn = var.metastore_iam_role_arn
   }
   comment = "Storage credential for Unity Catalog metastore S3 bucket (${var.environment})"
+  depends_on = [databricks_metastore_assignment.workspace]
 }
 
 # Unity Catalog Metastore - NEW metastore with S3 storage

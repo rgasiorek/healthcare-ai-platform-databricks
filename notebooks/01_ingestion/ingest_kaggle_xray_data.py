@@ -94,8 +94,17 @@ print("Download complete!")
 # MAGIC ## Step 5: Explore Downloaded Files
 
 # COMMAND ----------
-# List downloaded files
-dbutils.fs.ls(f"file:{DOWNLOAD_PATH}")
+# List downloaded files using Python standard library
+import os
+from pathlib import Path
+
+download_dir = Path(DOWNLOAD_PATH)
+if download_dir.exists():
+    print(f"Contents of {DOWNLOAD_PATH}:")
+    for item in download_dir.iterdir():
+        print(f"  {item.name} ({'dir' if item.is_dir() else 'file'})")
+else:
+    print(f"Directory {DOWNLOAD_PATH} does not exist")
 
 # COMMAND ----------
 # MAGIC %md

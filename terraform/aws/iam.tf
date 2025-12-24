@@ -21,7 +21,8 @@ data "aws_iam_policy_document" "databricks_assume_role" {
     }
   }
 
-  # Allow the role to assume itself (self-assuming) - required for Unity Catalog
+  # Self-assuming statement - required by Unity Catalog for external locations
+  # Note: This is added AFTER initial role creation to avoid circular dependency
   statement {
     sid     = "SelfAssumeRole"
     effect  = "Allow"
