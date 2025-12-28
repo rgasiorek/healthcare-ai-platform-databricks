@@ -11,16 +11,18 @@ resource "databricks_storage_credential" "unity_catalog_metastore" {
     role_arn = var.metastore_iam_role_arn
   }
   comment = "Storage credential for Unity Catalog metastore S3 bucket (${var.environment})"
-  depends_on = [databricks_metastore_assignment.workspace]
+  # Note: Removed depends_on to avoid circular dependency
+  # The credential can be created independently and associated with metastore later
 }
 
 # Unity Catalog Metastore - NEW metastore with S3 storage
 resource "databricks_metastore" "healthcare" {
-  name          = "healthcare-metastore-${var.environment}-${data.aws_region.current.name}"
-  storage_root  = "s3://${var.unity_catalog_bucket_id}/metastore"
-  owner         = "account users"
-  region        = data.aws_region.current.name
-  force_destroy = true  # For dev environment
+  name                       = "healthcare-metastore-${var.environment}-${data.aws_region.current.name}"
+  storage_root               = "s3://${var.unity_catalog_bucket_id}/metastore"
+  storage_root_credential_id = databricks_storage_credential.unity_catalog_metastore.storage_credential_id
+  owner                      = "account users"
+  region                     = data.aws_region.current.name
+  force_destroy              = true  # For dev environment
 }
 
 # Assign metastore to workspace
