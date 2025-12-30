@@ -162,7 +162,8 @@ print(f"  Path: {test_image_path}")
 print(f"  True Category: {true_category}")
 
 # Load and preprocess image (same as training)
-local_path = test_image_path.replace("dbfs:", "/dbfs")
+# Unity Catalog volumes use /Volumes/ path directly (no /dbfs prefix)
+local_path = test_image_path.replace("dbfs:", "")
 img = Image.open(local_path)
 img = img.convert('RGB')
 img = img.resize((64, 64))
@@ -251,7 +252,8 @@ correct_predictions = 0
 
 for i, row in enumerate(test_rows):
     # Load image
-    local_path = row.file_path.replace("dbfs:", "/dbfs")
+    # Unity Catalog volumes use /Volumes/ path directly (no /dbfs prefix)
+    local_path = row.file_path.replace("dbfs:", "")
     img = Image.open(local_path)
     img = img.convert('RGB')
     img = img.resize((64, 64))
