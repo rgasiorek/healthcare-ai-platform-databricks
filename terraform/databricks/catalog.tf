@@ -114,6 +114,17 @@ resource "databricks_schema" "gold" {
   }
 }
 
+# Models Schema - MLflow model registry
+resource "databricks_schema" "models" {
+  catalog_name = databricks_catalog.healthcare.name
+  name         = "models"
+  comment      = "ML models registered via MLflow Model Registry"
+  properties = {
+    layer   = "models"
+    quality = "ml-registry"
+  }
+}
+
 # Volume for X-ray images in Bronze layer
 resource "databricks_volume" "xray_images" {
   catalog_name = databricks_catalog.healthcare.name

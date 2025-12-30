@@ -23,7 +23,7 @@ from PIL import Image
 import numpy as np
 
 # Configuration
-MODEL_NAME = "pneumonia_poc_classifier"
+MODEL_NAME = "healthcare_catalog_dev.models.pneumonia_poc_classifier"  # Unity Catalog full path
 MODEL_VERSION = "1"  # Use version 1 (latest)
 ENDPOINT_NAME = "pneumonia-poc-classifier"
 WORKLOAD_SIZE = "Small"  # Small serverless endpoint (cost-effective)

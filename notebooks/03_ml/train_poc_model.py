@@ -229,7 +229,7 @@ with mlflow.start_run(run_name="simple_cnn_poc_v1"):
     mlflow.tensorflow.autolog()
 
     # Log hyperparameters
-    mlflow.log_param("sample_size", SAMPLE_SIZE)
+    mlflow.log_param("sample_size", SAMPLE_SIZE_PER_CLASS * 2)  # Total images (50 per class * 2)
     mlflow.log_param("image_size", IMAGE_SIZE)
     mlflow.log_param("model_architecture", "SimpleCNN")
     mlflow.log_param("optimizer", "adam")
@@ -275,11 +275,11 @@ with mlflow.start_run(run_name="simple_cnn_poc_v1"):
     cm = tf.math.confusion_matrix(y_test, y_pred).numpy()
     mlflow.log_param("confusion_matrix", cm.tolist())
 
-    # Register model to MLflow Model Registry
+    # Register model to MLflow Model Registry (Unity Catalog)
     mlflow.keras.log_model(
         model,
         artifact_path="model",
-        registered_model_name="pneumonia_poc_classifier"
+        registered_model_name="healthcare_catalog_dev.models.pneumonia_poc_classifier"
     )
 
     print("\n" + "="*80)
@@ -294,5 +294,5 @@ with mlflow.start_run(run_name="simple_cnn_poc_v1"):
     print(f"  AUC:       {test_auc:.3f}")
     print(f"\nConfusion Matrix:")
     print(f"  {cm}")
-    print(f"\nModel registered in MLflow as: pneumonia_poc_classifier")
+    print(f"\nModel registered in MLflow as: healthcare_catalog_dev.models.pneumonia_poc_classifier")
     print(f"\n➡️  Next Step: Deploy serving endpoint (see /Shared/deploy-serving-endpoint)")
