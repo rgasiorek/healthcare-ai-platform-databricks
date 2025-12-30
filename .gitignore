@@ -12,6 +12,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+current_state.json
 
 # Python
 __pycache__/

@@ -394,7 +394,6 @@ MIT
 ## Author
 
 **Radoslaw Gasiorek**
-Montrose Software
 
 ---
 
