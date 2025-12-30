@@ -29,5 +29,12 @@ resource "databricks_notebook" "deploy_serving_endpoint" {
   source   = "${path.module}/../../notebooks/03_ml/deploy_serving_endpoint.py"
 }
 
+# ML Demo: SDK vs REST API Model Usage
+resource "databricks_notebook" "demo_model_usage" {
+  path     = "/Shared/demo-model-usage"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/03_ml/demo_model_usage.py"
+}
+
 # Outputs
 
