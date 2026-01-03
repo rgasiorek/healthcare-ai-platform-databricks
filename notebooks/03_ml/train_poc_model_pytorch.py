@@ -263,7 +263,7 @@ class SimpleCNN(nn.Module):
         x = self.pool2(x)
 
         # Flatten
-        x = x.view(x.size(0), -1)  # Flatten all dimensions except batch
+        x = torch.flatten(x, 1)  # Flatten all dimensions except batch (more robust than view)
 
         # Dense layers
         x = F.relu(self.fc1(x))
