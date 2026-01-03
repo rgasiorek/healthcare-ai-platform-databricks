@@ -254,14 +254,50 @@ else:
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 2.2: Run Predictions using REST API (One at a Time)
+# MAGIC ## Step 2.2: Warm Up Endpoint (Handle Cold Start)
+# MAGIC
+# MAGIC Serverless endpoints shut down when idle. First request may take 30-60s to start.
+
+# COMMAND ----------
+invocation_url = f"https://{workspace_url}/serving-endpoints/{ENDPOINT_NAME}/invocations"
+
+print("Warming up endpoint (handling cold start)...")
+print("This may take 30-60 seconds on first request...\n")
+
+# Warm-up request with longer timeout
+warm_img = preprocess_image(test_samples[0].file_path, IMAGE_SIZE)
+warm_payload = {"dataframe_records": [{"image": warm_img.tolist()}]}
+
+try:
+    warm_start = time.time()
+    warm_response = requests.post(
+        invocation_url,
+        headers={"Authorization": f"Bearer {token}"},
+        json=warm_payload,
+        timeout=90  # Longer timeout for cold start
+    )
+    warm_duration = time.time() - warm_start
+
+    if warm_response.status_code == 200:
+        print(f"✅ Endpoint warmed up successfully!")
+        print(f"   Cold start time: {warm_duration:.1f} seconds")
+        print(f"\nNow endpoint is warm - subsequent requests will be fast (~0.1-0.2s)\n")
+    else:
+        print(f"⚠️  Warm-up got status {warm_response.status_code}")
+        print(f"   Will try actual predictions anyway...\n")
+
+except Exception as e:
+    print(f"⚠️  Warm-up request failed: {e}")
+    print(f"   Endpoint might still be starting. Will retry with longer timeout...\n")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 2.3: Run Predictions using REST API (One at a Time)
 
 # COMMAND ----------
 print("=" * 80)
 print("APPROACH 2: REST API - Individual Predictions")
 print("=" * 80)
-
-invocation_url = f"https://{workspace_url}/serving-endpoints/{ENDPOINT_NAME}/invocations"
 
 print(f"\nEndpoint URL: {invocation_url}")
 print(f"Making {len(test_samples)} individual API calls...\n")
@@ -288,12 +324,12 @@ for i, sample in enumerate(test_samples):
     request_start = time.time()
 
     try:
-        # Call REST API
+        # Call REST API (increased timeout for cold starts)
         response = requests.post(
             invocation_url,
             headers={"Authorization": f"Bearer {token}"},
             json=payload,
-            timeout=30
+            timeout=60  # Increased from 30 to handle any cold starts
         )
 
         request_duration = time.time() - request_start

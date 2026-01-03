@@ -185,11 +185,12 @@ print(f"Calling endpoint: {invocation_url}")
 print(f"Payload size: {len(json.dumps(payload))} bytes")
 
 try:
+    # Note: First request may take 30-60s due to serverless cold start
     response = requests.post(
         invocation_url,
         headers={"Authorization": f"Bearer {token}"},
         json=payload,
-        timeout=30
+        timeout=90  # Longer timeout to handle cold start
     )
 
     if response.status_code == 200:
@@ -267,7 +268,7 @@ for i, row in enumerate(test_rows):
             invocation_url,
             headers={"Authorization": f"Bearer {token}"},
             json=payload,
-            timeout=30
+            timeout=60  # Increased timeout for any cold starts
         )
 
         if response.status_code == 200:
