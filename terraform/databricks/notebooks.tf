@@ -15,11 +15,18 @@ resource "databricks_notebook" "kaggle_ingestion" {
   source   = "${path.module}/../../notebooks/01_ingestion/ingest_kaggle_xray_data.py"
 }
 
-# ML POC Training Notebook
+# ML POC Training Notebook (TensorFlow)
 resource "databricks_notebook" "train_poc_model" {
   path     = "/Shared/train-poc-model"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/03_ml/train_poc_model.py"
+}
+
+# ML POC Training Notebook (PyTorch)
+resource "databricks_notebook" "train_poc_model_pytorch" {
+  path     = "/Shared/train-poc-model-pytorch"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/03_ml/train_poc_model_pytorch.py"
 }
 
 # ML POC Serving Endpoint Notebook
