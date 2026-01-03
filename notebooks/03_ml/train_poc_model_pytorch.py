@@ -502,12 +502,28 @@ with mlflow.start_run(run_name="simple_cnn_pytorch_poc_v1"):
     mlflow.log_metric("test_auc", test_metrics['auc'])
     mlflow.log_param("confusion_matrix", test_metrics['confusion_matrix'])
 
+    # Create model signature (REQUIRED for Unity Catalog)
+    # Signature defines input/output schema for serving endpoint
+    from mlflow.models import infer_signature
+
+    # Get sample input and output for signature inference
+    sample_input = X_test[:1]  # Single sample (1, 64, 64, 3) NumPy array
+    sample_input_tensor = torch.FloatTensor(sample_input).permute(0, 3, 1, 2).to(device)
+
+    model.eval()
+    with torch.no_grad():
+        sample_output = model(sample_input_tensor).cpu().numpy()
+
+    # Infer signature from sample data
+    signature = infer_signature(sample_input, sample_output)
+
     # Register model to MLflow Model Registry (Unity Catalog)
-    # Note: Using same model name as TensorFlow version - MLflow handles different frameworks
+    # Note: Unity Catalog REQUIRES signature for all models
     mlflow.pytorch.log_model(
         model,
         artifact_path="model",
-        registered_model_name="healthcare_catalog_dev.models.pneumonia_poc_classifier_pytorch"
+        registered_model_name="healthcare_catalog_dev.models.pneumonia_poc_classifier_pytorch",
+        signature=signature  # REQUIRED for Unity Catalog
     )
 
     print(f"{'='*80}")

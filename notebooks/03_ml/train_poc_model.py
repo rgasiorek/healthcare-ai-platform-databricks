@@ -275,11 +275,24 @@ with mlflow.start_run(run_name="simple_cnn_poc_v1"):
     cm = tf.math.confusion_matrix(y_test, y_pred).numpy()
     mlflow.log_param("confusion_matrix", cm.tolist())
 
+    # Create model signature (REQUIRED for Unity Catalog)
+    # Signature defines input/output schema for serving endpoint
+    from mlflow.models import infer_signature
+
+    # Get sample input and output for signature inference
+    sample_input = X_test[:1]  # Single sample (1, 64, 64, 3) NumPy array
+    sample_output = model.predict(sample_input, verbose=0)
+
+    # Infer signature from sample data
+    signature = infer_signature(sample_input, sample_output)
+
     # Register model to MLflow Model Registry (Unity Catalog)
+    # Note: Unity Catalog REQUIRES signature for all models
     mlflow.keras.log_model(
         model,
         artifact_path="model",
-        registered_model_name="healthcare_catalog_dev.models.pneumonia_poc_classifier"
+        registered_model_name="healthcare_catalog_dev.models.pneumonia_poc_classifier",
+        signature=signature  # REQUIRED for Unity Catalog
     )
 
     print("\n" + "="*80)
