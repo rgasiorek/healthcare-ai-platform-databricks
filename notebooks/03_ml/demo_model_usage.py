@@ -266,7 +266,8 @@ print("This may take 30-60 seconds on first request...\n")
 
 # Warm-up request with longer timeout
 warm_img = preprocess_image(test_samples[0].file_path, IMAGE_SIZE)
-warm_payload = {"dataframe_records": [{"image": warm_img.tolist()}]}
+# TensorFlow/Keras models expect "inputs" format
+warm_payload = {"inputs": [warm_img.tolist()]}
 
 try:
     warm_start = time.time()
@@ -314,10 +315,10 @@ for i, sample in enumerate(test_samples):
     img_array = preprocess_image(sample.file_path, IMAGE_SIZE)
 
     # Prepare API payload
+    # TensorFlow/Keras models expect "inputs" format (not dataframe_records)
+    # Model signature expects tensor shape: (-1, 64, 64, 3)
     payload = {
-        "dataframe_records": [{
-            "image": img_array.tolist()
-        }]
+        "inputs": [img_array.tolist()]  # Wrap in list for batch dimension
     }
 
     # Measure individual request time
@@ -584,10 +585,9 @@ endpoint_url = f"https://{workspace_url}/serving-endpoints/pneumonia-poc-classif
 img_array = preprocess_image(image_path)  # Shape: (64, 64, 3)
 
 # 3. Call REST API
+# TensorFlow/Keras models expect "inputs" format
 payload = {
-    "dataframe_records": [{
-        "image": img_array.tolist()
-    }]
+    "inputs": [img_array.tolist()]  # List for batch dimension
 }
 
 response = requests.post(

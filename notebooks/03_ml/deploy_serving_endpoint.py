@@ -176,9 +176,7 @@ print(f"  Image shape: {img_array.shape}")
 invocation_url = f"https://{workspace_url}/serving-endpoints/{ENDPOINT_NAME}/invocations"
 
 payload = {
-    "dataframe_records": [{
-        "image": img_array.tolist()
-    }]
+    "inputs": [img_array.tolist()]  # TensorFlow/Keras models expect "inputs" format
 }
 
 print(f"Calling endpoint: {invocation_url}")
@@ -261,7 +259,7 @@ for i, row in enumerate(test_rows):
     img_array = np.array(img) / 255.0
 
     # Call endpoint
-    payload = {"dataframe_records": [{"image": img_array.tolist()}]}
+    payload = {"inputs": [img_array.tolist()]}  # TensorFlow/Keras format
 
     try:
         response = requests.post(
@@ -319,7 +317,7 @@ print(f"\n✅ Serving endpoint is stable and responding correctly!")
 # MAGIC response = requests.post(
 # MAGIC     "https://{workspace_url}/serving-endpoints/pneumonia-poc-classifier/invocations",
 # MAGIC     headers={"Authorization": f"Bearer {token}"},
-# MAGIC     json={"dataframe_records": [{"image": image_array.tolist()}]}
+# MAGIC     json={"inputs": [image_array.tolist()]}
 # MAGIC )
 # MAGIC
 # MAGIC prediction = response.json()['predictions'][0]
