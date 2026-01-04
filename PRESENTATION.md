@@ -9,51 +9,114 @@
 ---
 
 ## Slide 1: The Challenge
-**Building Healthcare AI That Actually Works in Production**
+**Why Healthcare AI is Hard**
 
-- Medical images need accurate, reliable AI diagnosis
-- Traditional ML projects fail without proper infrastructure
-- Production requires monitoring, updates, and continuous improvement
+- Not just model accuracy - need production infrastructure
+- Data governance, ACID transactions, model serving, monitoring
+- DIY approach: 18-24 months before first experiment
 
 ---
 
 ## Slide 2: The Vision
-**From Data Lake to Self-Improving AI**
+**Production MLOps in 3-4 Days**
 
 - Pneumonia detection from chest X-rays
-- Complete end-to-end MLOps pipeline
+- Complete end-to-end: Train → Monitor → Improve
 - Champion/Challenger A/B testing with feedback loops
 
 ---
 
-## Slide 3: The Project Goal
-**Zero Clicking in Cloud Consoles**
+## Slide 3: The Secret Sauce
+**Three Enablers Working Together**
 
-- Eliminate manual AWS/Databricks console operations
-- 100% automation from conversation to deployment
-- Everything versioned, reproducible, documented
-
----
-
-## Slide 4: How AI Enabled This
-**Claude Code with Direct System Access**
-
-- Full SDLC automation (Plan → Deploy → Document)
-- Enables MLOps experimentation (days, not months)
-- Terraform as dual-purpose: IaC + AI context
+- Databricks: Pre-built MLOps infrastructure (16-31 months saved)
+- Claude Code: Zero-click automation for SDLC
+- Terraform: IaC + AI context dual purpose
 
 ---
 
-## Slide 5: The Strategic Value
-**What This Demonstrates**
+## Slide 4: Databricks Value
+**vs Building from Scratch (EC2/ECS)**
 
-- Human: Strategic decisions, architecture, approvals
-- AI: SDLC automation, zero-click execution
-- Result: Staff engineer experiments, AI automates
+- Unity Catalog: 3-6 months saved
+- Delta Lake (ACID on S3): 6-12 months saved
+- Model Serving + A/B testing: 2-3 months saved
 
 ---
 
-## Slide 8: The Foundation - AWS Integration
+## Slide 5: Databricks Value (cont.)
+**What You'd Need to Build**
+
+- 10+ services: EMR, ECS, RDS, Kafka
+- Custom governance, ACID implementation, inference logging
+- Total: 16-31 months engineering effort eliminated
+
+---
+
+## Slide 6: Claude Code Value
+**Zero-Click Automation**
+
+- Goal: No manual clicking in consoles
+- AI automates full SDLC (Plan → Test → Document)
+- This is DEV automation (not CI/CD or app automation)
+
+---
+
+## Slide 7: What is "No-Clicking"?
+**Dev Automation vs Other Automation**
+
+- Not CI/CD (that runs after code committed)
+- Not application automation (end-user workflows)
+- DEV automation: Conversation → Deployed infrastructure
+
+---
+
+## Slide 8: Terraform's Dual Purpose
+**Innovation in AI-Assisted Development**
+
+- Traditional: Infrastructure as Code
+- Novel: Perfect structured context for AI
+- Result: AI reads schemas, writes correct code
+
+---
+
+## Slide 9: DIY vs Databricks + Claude Code
+**Timeline Comparison**
+
+- DIY (EC2/ECS): 18-24 months to MVP
+- Databricks + Claude Code: 3-4 days to MVP
+- 100x faster time to experimentation
+
+---
+
+## Slide 10: DIY vs Databricks + Claude Code
+**Cost Comparison**
+
+- DIY: ~$800-1,250/month + 3-5 engineers
+- Databricks: ~$160-350/month + zero ops burden
+- Similar cost, massively less complexity
+
+---
+
+## Slide 11: Product Management Approach
+**Issue-Driven Development**
+
+- 15 GitHub issues tracked all work
+- Human: Vision, architecture, strategic decisions
+- AI: SDLC execution, documentation, deployment
+
+---
+
+## Slide 12: Strategic Outcomes
+**What Was Achieved**
+
+- Production MLOps: A/B testing, feedback loops
+- Zero-click automation: 100% from conversation to cloud
+- MLOps experimentation: Days, not months
+
+---
+
+## Slide 13: The Foundation - AWS Integration
 **Secure, Scalable Cloud Infrastructure**
 
 - Two S3 buckets: Unity Catalog + data lake
@@ -62,7 +125,7 @@
 
 ---
 
-## Slide 9: Data Governance - Unity Catalog
+## Slide 14: Data Governance - Unity Catalog
 **One Place to Rule Them All**
 
 - Unified governance for data and AI assets
@@ -71,7 +134,7 @@
 
 ---
 
-## Slide 5: Data Architecture - Medallion Pattern
+## Slide 15: Data Architecture - Medallion Pattern
 **Bronze → Silver → Gold**
 
 - **Bronze**: Raw X-ray images (1000 files)
@@ -80,7 +143,7 @@
 
 ---
 
-## Slide 6: The Data - Real Medical Images
+## Slide 16: The Data - Real Medical Images
 **Kaggle Chest X-Ray Pneumonia Dataset**
 
 - 1000 X-ray images (500 normal, 500 pneumonia)
@@ -89,7 +152,7 @@
 
 ---
 
-## Slide 7: Data Ingestion - From Kaggle to Delta
+## Slide 17: Data Ingestion - From Kaggle to Delta
 **Automated Pipeline with Tracking**
 
 - Download 1000 images from Kaggle API
@@ -98,7 +161,7 @@
 
 ---
 
-## Slide 8: The ML Question
+## Slide 18: The ML Question
 **How Do We Build a Pneumonia Classifier?**
 
 - Need fast POC to prove workflow
@@ -107,7 +170,7 @@
 
 ---
 
-## Slide 9: Training - TensorFlow Model (Champion)
+## Slide 19: Training - TensorFlow Model (Champion)
 **First Model: Keras CNN**
 
 - Small CNN: 64x64 images, simple architecture
@@ -116,7 +179,7 @@
 
 ---
 
-## Slide 10: Training - PyTorch Model (Challenger)
+## Slide 20: Training - PyTorch Model (Challenger)
 **Second Model: Educational Comparison**
 
 - Same architecture, different framework (PyTorch)
@@ -125,7 +188,7 @@
 
 ---
 
-## Slide 11: MLflow Model Registry
+## Slide 21: MLflow Model Registry
 **Versioned, Governed Model Storage**
 
 - `pneumonia_poc_classifier` (TensorFlow/Keras)
@@ -134,7 +197,7 @@
 
 ---
 
-## Slide 12: The Deployment Challenge
+## Slide 22: The Deployment Challenge
 **From Notebook to Production API**
 
 - How do doctors access predictions?
@@ -143,7 +206,7 @@
 
 ---
 
-## Slide 13: Model Serving - Single Endpoint
+## Slide 23: Model Serving - Single Endpoint
 **REST API for Real-Time Predictions**
 
 - Serverless endpoint (auto-scaling, cost-effective)
@@ -152,7 +215,7 @@
 
 ---
 
-## Slide 14: The A/B Testing Problem
+## Slide 24: The A/B Testing Problem
 **How Do We Know Which Model is Better?**
 
 - We have two models (Keras vs PyTorch)
@@ -161,7 +224,7 @@
 
 ---
 
-## Slide 15: Champion/Challenger Pattern
+## Slide 25: Champion/Challenger Pattern
 **The Industry Standard for Model Updates**
 
 - **Champion**: Current production model (proven)
@@ -170,7 +233,7 @@
 
 ---
 
-## Slide 16: A/B Testing Endpoint
+## Slide 26: A/B Testing Endpoint
 **Single Endpoint, Multiple Models**
 
 - Traffic splitting: 50% Champion, 50% Challenger
@@ -179,7 +242,7 @@
 
 ---
 
-## Slide 17: Inference Table Logging
+## Slide 27: Inference Table Logging
 **Automatic Prediction Tracking**
 
 - Every prediction automatically logged to Delta table
@@ -188,7 +251,7 @@
 
 ---
 
-## Slide 18: The Missing Piece - Ground Truth
+## Slide 28: The Missing Piece - Ground Truth
 **Predictions Alone Don't Tell Us Accuracy**
 
 - Model says "PNEUMONIA" → Was it correct?
@@ -197,7 +260,7 @@
 
 ---
 
-## Slide 19: Feedback Infrastructure
+## Slide 29: Feedback Infrastructure
 **Closing the Loop with Ground Truth**
 
 - `prediction_feedback` table stores radiologist diagnoses
@@ -206,7 +269,7 @@
 
 ---
 
-## Slide 20: Feedback Collector API
+## Slide 30: Feedback Collector API
 **BentoML-Style Simple Interface**
 
 - `submit_feedback(request_id, "true-positive", radiologist_id="DR001")`
@@ -215,7 +278,7 @@
 
 ---
 
-## Slide 21: The Complete Feedback Loop
+## Slide 31: The Complete Feedback Loop
 **Connecting Predictions to Reality**
 
 - **Step 1**: Make prediction, capture request_id
@@ -224,7 +287,7 @@
 
 ---
 
-## Slide 22: Model Performance View
+## Slide 32: Model Performance View
 **Real-Time Accuracy Calculation**
 
 - `model_performance_live` view JOINs inference + feedback
@@ -233,7 +296,7 @@
 
 ---
 
-## Slide 23: Monitoring Dashboard
+## Slide 33: Monitoring Dashboard
 **Champion vs Challenger Comparison**
 
 - Traffic distribution (actual vs configured)
@@ -242,7 +305,7 @@
 
 ---
 
-## Slide 24: Statistical Significance
+## Slide 34: Statistical Significance
 **Is the Difference Real or Luck?**
 
 - Chi-square test for significance
@@ -251,7 +314,7 @@
 
 ---
 
-## Slide 25: Automated Decision Engine
+## Slide 35: Automated Decision Engine
 **Data-Driven Model Promotion**
 
 - **PROMOTE**: Challenger significantly better (accuracy + p-value)
@@ -260,7 +323,7 @@
 
 ---
 
-## Slide 26: Demo Notebook - Two Approaches
+## Slide 36: Demo Notebook - Two Approaches
 **SDK vs REST API**
 
 - **MLflow SDK**: Fast batch processing (1000s images)
@@ -269,7 +332,7 @@
 
 ---
 
-## Slide 27: Demo - Prediction Tracking
+## Slide 37: Demo - Prediction Tracking
 **Capturing the Request ID**
 
 - Every REST API response includes `request_id`
@@ -278,7 +341,7 @@
 
 ---
 
-## Slide 28: Demo - Submitting Feedback
+## Slide 38: Demo - Submitting Feedback
 **Simulating Radiologist Review**
 
 - Import feedback_collector module
@@ -287,7 +350,7 @@
 
 ---
 
-## Slide 29: Demo - Querying Performance
+## Slide 39: Demo - Querying Performance
 **Seeing Which Model is Winning**
 
 - Query `model_performance_live` view
@@ -296,7 +359,7 @@
 
 ---
 
-## Slide 30: The Complete MLOps Cycle
+## Slide 40: The Complete MLOps Cycle
 **From Training to Continuous Improvement**
 
 1. **TRAIN**: Keras + PyTorch models
@@ -305,7 +368,7 @@
 
 ---
 
-## Slide 31: The Complete MLOps Cycle (cont.)
+## Slide 41: The Complete MLOps Cycle (cont.)
 **The Feedback Loop**
 
 4. **COLLECT**: Radiologist submits ground truth
@@ -314,7 +377,7 @@
 
 ---
 
-## Slide 32: Why This Matters - Production Ready
+## Slide 42: Why This Matters - Production Ready
 **Not Just a POC, Real MLOps**
 
 - Real-world accuracy tracking (not just validation set)
@@ -323,7 +386,7 @@
 
 ---
 
-## Slide 33: Why This Matters - Educational Value
+## Slide 43: Why This Matters - Educational Value
 **Teaching Modern MLOps**
 
 - Complete end-to-end workflow demonstrated
@@ -332,7 +395,7 @@
 
 ---
 
-## Slide 34: Why This Matters - Scalability
+## Slide 44: Why This Matters - Scalability
 **Built to Grow**
 
 - Environment-based naming (dev → pilot → prod)
@@ -341,7 +404,7 @@
 
 ---
 
-## Slide 35: Technical Stack
+## Slide 45: Technical Stack
 **Modern, Industry-Standard Tools**
 
 - **Cloud**: AWS (S3, IAM)
@@ -350,7 +413,7 @@
 
 ---
 
-## Slide 36: Technical Stack (cont.)
+## Slide 46: Technical Stack (cont.)
 **MLOps & Storage**
 
 - **Storage**: Delta Lake (ACID transactions)
@@ -359,7 +422,7 @@
 
 ---
 
-## Slide 37: Technical Stack (cont.)
+## Slide 47: Technical Stack (cont.)
 **Deployment & Monitoring**
 
 - **IaC**: Terraform (everything versioned)
@@ -368,7 +431,7 @@
 
 ---
 
-## Slide 38: Key Achievements - Infrastructure
+## Slide 48: Key Achievements - Infrastructure
 **Solid Foundation**
 
 - ✅ AWS S3 integration with Unity Catalog
@@ -377,7 +440,7 @@
 
 ---
 
-## Slide 39: Key Achievements - ML Pipeline
+## Slide 49: Key Achievements - ML Pipeline
 **End-to-End Workflow**
 
 - ✅ Two trained models (Keras + PyTorch)
@@ -386,7 +449,7 @@
 
 ---
 
-## Slide 40: Key Achievements - A/B Testing
+## Slide 50: Key Achievements - A/B Testing
 **Production MLOps**
 
 - ✅ Champion/Challenger A/B testing infrastructure
@@ -395,7 +458,7 @@
 
 ---
 
-## Slide 41: What Makes This Special - Completeness
+## Slide 51: What Makes This Special - Completeness
 **Every Piece of Production MLOps**
 
 - Most demos stop at training
@@ -404,7 +467,7 @@
 
 ---
 
-## Slide 42: What Makes This Special - Best Practices
+## Slide 52: What Makes This Special - Best Practices
 **Industry-Standard Patterns**
 
 - Champion/Challenger (not just model replacement)
@@ -413,7 +476,7 @@
 
 ---
 
-## Slide 43: What Makes This Special - Governance
+## Slide 53: What Makes This Special - Governance
 **Enterprise-Ready**
 
 - Unity Catalog for centralized governance
@@ -422,7 +485,7 @@
 
 ---
 
-## Slide 44: The Meta-Story
+## Slide 54: The Meta-Story
 **Zero-Click Automation Achieved**
 
 - Project goal: Eliminate console clicking
@@ -431,7 +494,7 @@
 
 ---
 
-## Slide 45: Full SDLC Automation
+## Slide 55: Full SDLC Automation
 **AI Across Entire Workflow**
 
 - Plan → Build → Deploy → Test → Document
@@ -440,7 +503,7 @@
 
 ---
 
-## Slide 46: Testing Strategy
+## Slide 56: Testing Strategy
 **Two Approaches**
 
 - AI runs automated tests based on requirements
@@ -449,7 +512,7 @@
 
 ---
 
-## Slide 47: MLOps Experimentation Enabled
+## Slide 57: MLOps Experimentation Enabled
 **Rapid Pattern Testing**
 
 - A/B testing implemented in days
@@ -458,7 +521,7 @@
 
 ---
 
-## Slide 48: Terraform's Dual Role
+## Slide 58: Terraform's Dual Role
 **Strategic Innovation**
 
 - Infrastructure as Code (traditional)
@@ -467,7 +530,7 @@
 
 ---
 
-## Slide 49: The Strategic Shift
+## Slide 59: The Strategic Shift
 **Human vs AI Roles**
 
 - Human: Vision, architecture, strategic decisions
@@ -476,7 +539,7 @@
 
 ---
 
-## Slide 59: Lessons Learned - Cold Starts
+## Slide 60: Lessons Learned - Cold Starts
 **Serverless Endpoints Need Warm-Up**
 
 - First request: 30-60 seconds
@@ -485,7 +548,7 @@
 
 ---
 
-## Slide 45: Lessons Learned - Model Signatures
+## Slide 61: Lessons Learned - Model Signatures
 **Unity Catalog Requires Schemas**
 
 - Must define input/output schema
@@ -494,7 +557,7 @@
 
 ---
 
-## Slide 46: Lessons Learned - Payload Formats
+## Slide 62: Lessons Learned - Payload Formats
 **Different Frameworks, Different Expectations**
 
 - TensorFlow/Keras: `{"inputs": [array]}`
@@ -503,7 +566,7 @@
 
 ---
 
-## Slide 47: Future Enhancements - Better Models
+## Slide 63: Future Enhancements - Better Models
 **From POC to Production Quality**
 
 - Transfer learning (EfficientNet, ResNet)
@@ -512,7 +575,7 @@
 
 ---
 
-## Slide 48: Future Enhancements - Feature Engineering
+## Slide 64: Future Enhancements - Feature Engineering
 **Improving Data Quality**
 
 - Bronze → Silver transformation pipeline
@@ -521,7 +584,7 @@
 
 ---
 
-## Slide 49: Future Enhancements - Automation
+## Slide 65: Future Enhancements - Automation
 **CI/CD and Auto-Retraining**
 
 - GitHub Actions for deployment
@@ -530,7 +593,7 @@
 
 ---
 
-## Slide 50: The Journey Recap
+## Slide 66: The Journey Recap
 **What We Built**
 
 - From AWS buckets to production AI
@@ -539,7 +602,7 @@
 
 ---
 
-## Slide 51: The Journey Recap (cont.)
+## Slide 67: The Journey Recap (cont.)
 **How We Built It**
 
 - Infrastructure as Code (Terraform)
@@ -548,7 +611,7 @@
 
 ---
 
-## Slide 52: The Business Value
+## Slide 68: The Business Value
 **Why This Matters to Healthcare**
 
 - Safer AI deployment (A/B testing)
@@ -557,7 +620,7 @@
 
 ---
 
-## Slide 53: The Educational Value
+## Slide 69: The Educational Value
 **Why This Matters to Students**
 
 - Complete MLOps workflow demonstrated
@@ -566,7 +629,7 @@
 
 ---
 
-## Slide 54: The Technical Value
+## Slide 70: The Technical Value
 **Why This Matters to Engineers**
 
 - Reproducible infrastructure (Terraform)
@@ -575,7 +638,7 @@
 
 ---
 
-## Slide 55: Try It Yourself - Setup
+## Slide 71: Try It Yourself - Setup
 **Getting Started**
 
 1. Clone repository from GitHub
@@ -584,7 +647,7 @@
 
 ---
 
-## Slide 56: Try It Yourself - Ingest Data
+## Slide 72: Try It Yourself - Ingest Data
 **Load the X-Ray Images**
 
 1. Open `/Shared/ingest-kaggle-xray-data` notebook
@@ -593,7 +656,7 @@
 
 ---
 
-## Slide 57: Try It Yourself - Train Models
+## Slide 73: Try It Yourself - Train Models
 **Create the Classifiers**
 
 1. Run `/Shared/train-poc-model` (TensorFlow)
@@ -602,7 +665,7 @@
 
 ---
 
-## Slide 58: Try It Yourself - Deploy A/B Endpoint
+## Slide 74: Try It Yourself - Deploy A/B Endpoint
 **Set Up Champion vs Challenger**
 
 1. Run `/Shared/deploy-ab-testing-endpoint` notebook
@@ -611,7 +674,7 @@
 
 ---
 
-## Slide 59: Try It Yourself - Make Predictions
+## Slide 75: Try It Yourself - Make Predictions
 **Test the System**
 
 1. Run `/Shared/demo-model-usage` notebook
@@ -620,7 +683,7 @@
 
 ---
 
-## Slide 60: Try It Yourself - Submit Feedback
+## Slide 76: Try It Yourself - Submit Feedback
 **Close the Loop**
 
 1. Use `submit_feedback()` function
@@ -629,7 +692,7 @@
 
 ---
 
-## Slide 61: Try It Yourself - Monitor Performance
+## Slide 77: Try It Yourself - Monitor Performance
 **Compare Champion vs Challenger**
 
 1. Run `/Shared/monitor-ab-test` notebook
@@ -638,7 +701,7 @@
 
 ---
 
-## Slide 62: Resources - Documentation
+## Slide 78: Resources - Documentation
 **Where to Learn More**
 
 - GitHub repository with all code
@@ -647,7 +710,7 @@
 
 ---
 
-## Slide 63: Resources - Notebooks
+## Slide 79: Resources - Notebooks
 **Hands-On Learning**
 
 - 9 Databricks notebooks included
@@ -656,7 +719,7 @@
 
 ---
 
-## Slide 64: Resources - Community
+## Slide 80: Resources - Community
 **Built with Claude Code**
 
 - Infrastructure managed with AI assistance
@@ -665,7 +728,7 @@
 
 ---
 
-## Slide 65: Final Thoughts - Dual Value
+## Slide 81: Final Thoughts - Dual Value
 **Two Achievements in One**
 
 - Healthcare AI: Production MLOps platform
@@ -674,7 +737,7 @@
 
 ---
 
-## Slide 66: The Technical Achievement
+## Slide 82: The Technical Achievement
 **Complete MLOps Platform**
 
 - Train → Monitor → Improve cycle
@@ -683,7 +746,7 @@
 
 ---
 
-## Slide 67: The Process Achievement
+## Slide 83: The Process Achievement
 **Zero-Click Automation**
 
 - Goal: Eliminate console clicking
@@ -692,7 +755,7 @@
 
 ---
 
-## Slide 68: Call to Action - For Students
+## Slide 84: Call to Action - For Students
 **Learn Modern MLOps**
 
 - Run the notebooks yourself
@@ -701,7 +764,7 @@
 
 ---
 
-## Slide 69: Call to Action - For Engineers
+## Slide 85: Call to Action - For Engineers
 **Achieve Zero-Click Automation**
 
 - Eliminate manual console operations
@@ -710,7 +773,7 @@
 
 ---
 
-## Slide 70: Call to Action - For Teams
+## Slide 86: Call to Action - For Teams
 **Deploy This to Production**
 
 - Clone repository, customize for use case
@@ -719,7 +782,7 @@
 
 ---
 
-## Slide 71: Thank You
+## Slide 87: Thank You
 **Questions?**
 
 - Repository: github.com/rgasiorek/healthcare-ai-platform-databricks
@@ -728,7 +791,7 @@
 
 ---
 
-## Slide 72: Key Takeaways
+## Slide 88: Key Takeaways
 **Remember These Three Things**
 
 1. Complete MLOps with feedback loops
