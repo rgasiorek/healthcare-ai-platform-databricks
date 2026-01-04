@@ -50,5 +50,12 @@ resource "databricks_notebook" "demo_model_usage" {
   source   = "${path.module}/../../notebooks/03_ml/demo_model_usage.py"
 }
 
+# Interactive Feedback Review (Radiologist Workflow)
+resource "databricks_notebook" "interactive_feedback_review" {
+  path     = "/Shared/interactive-feedback-review"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/04_feedback/interactive_feedback_review.py"
+}
+
 # Outputs
 

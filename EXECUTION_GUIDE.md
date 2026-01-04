@@ -117,37 +117,51 @@ GROUP BY category;
 
 ---
 
-### Step 6: Submit Feedback (1-2 minutes)
-**What**: Simulate radiologist ground truth labels
+### Step 6: Submit Feedback - Interactive Radiologist Review (2-3 minutes)
+**What**: Review predictions and submit ground truth feedback (like a real radiologist)
 
 **Run**:
-1. Continue in `demo-model-usage` notebook
-2. **Run the "NEW: Prediction Tracking & Feedback Loop" sections**
-3. This will:
-   - Show how to capture `request_id` from API response
-   - Submit feedback using `submit_feedback()`
-   - Link predictions to ground truth
+1. Go to **Shared** → `interactive-feedback-review`
+2. Attach to cluster: `healthcare-data-cluster-dev`
+3. Click **Run All**
 
-**Alternative - Manual SQL**:
-```sql
--- Insert sample feedback (replace request_id with actual values)
-INSERT INTO healthcare_catalog_dev.gold.prediction_feedback
-VALUES (
-  'feedback-001',                    -- feedback_id
-  'your-actual-request-id-here',     -- prediction_id (from Step 5)
-  current_timestamp(),               -- timestamp
-  'PNEUMONIA',                       -- ground_truth
-  'true-positive',                   -- feedback_type
-  'DR001',                           -- radiologist_id
-  'confirmed',                       -- confidence
-  'manual_test',                     -- feedback_source
-  'Clear consolidation visible'      -- notes
-);
+**What this notebook does**:
+- Loads recent predictions that don't have feedback yet
+- Shows AI prediction vs confidence
+- Allows you to submit ground truth diagnosis
+- Provides examples of:
+  - **True Positive**: AI said PNEUMONIA, radiologist confirms PNEUMONIA
+  - **False Positive**: AI said PNEUMONIA, radiologist says NORMAL
+  - **True Negative**: AI said NORMAL, radiologist confirms NORMAL
+  - **False Negative**: AI said NORMAL, radiologist says PNEUMONIA
+- Submits feedback to `prediction_feedback` table
+- Shows coverage statistics
+
+**Interactive Workflow**:
+```
+For each prediction:
+├─ View: Request ID, Model used, AI prediction, Confidence
+├─ Review: What AI said (NORMAL or PNEUMONIA)
+├─ Decide: What is the ground truth? (radiologist expertise)
+└─ Submit: Feedback automatically categorized (TP/FP/TN/FN)
+```
+
+**Helper Function Included**:
+```python
+# Quick feedback submission
+quick_feedback(
+    request_id="abc-123",
+    ai_was_correct=True,
+    actual_diagnosis="PNEUMONIA"
+)
 ```
 
 **What you get**:
 - ✅ Ground truth labels in `gold.prediction_feedback` table
 - ✅ Link between predictions and actual diagnoses
+- ✅ Automatic categorization (true-positive, false-positive, etc.)
+- ✅ Feedback coverage statistics
+- ✅ Ready for monitoring dashboard analysis
 
 ---
 
