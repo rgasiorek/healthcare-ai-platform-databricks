@@ -310,6 +310,73 @@ At this point, you have:
 
 ---
 
+## Optional: Deploy Feedback REST Endpoint (Production-Ready)
+
+### Why REST Endpoint?
+
+The interactive notebook uses a Python SDK (`feedback_collector.py`), which works for demos but isn't production-ready.
+
+**For production**, you want a **REST endpoint** that:
+- Can be called from web/mobile apps (not just notebooks)
+- Has direct access to inference tables for validation
+- Auto-determines feedback_type based on prediction vs ground_truth
+- Provides consistent REST interface with model serving
+
+### Deploy Feedback Endpoint (5-10 minutes)
+
+**Run**:
+1. Go to **Shared** → `deploy-feedback-endpoint`
+2. Attach to cluster: `healthcare-data-cluster-dev`
+3. Click **Run All**
+4. Wait 5-10 minutes for endpoint to be READY
+
+**What you get**:
+```
+REST Endpoint: POST /serving-endpoints/feedback-endpoint/invocations
+
+Architecture:
+├─ Prediction: /serving-endpoints/pneumonia-classifier-ab-test/invocations
+└─ Feedback: /serving-endpoints/feedback-endpoint/invocations
+```
+
+**Usage from any application**:
+```bash
+curl -X POST \
+  https://your-workspace.databricks.com/serving-endpoints/feedback-endpoint/invocations \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataframe_records": [{
+      "request_id": "abc-123",
+      "ground_truth": "PNEUMONIA",
+      "radiologist_id": "DR001",
+      "confidence": "confirmed",
+      "notes": "Confirmed diagnosis"
+    }]
+  }'
+```
+
+**Response**:
+```json
+{
+  "predictions": [{
+    "feedback_id": "feedback-12345678",
+    "status": "success",
+    "feedback_type": "true-positive",
+    "message": "Feedback submitted successfully"
+  }]
+}
+```
+
+**Benefits**:
+- ✅ Accessible from JavaScript/Swift/Java (any language)
+- ✅ Validates request_id exists before accepting feedback
+- ✅ Auto-calculates feedback_type (no manual TP/FP classification)
+- ✅ Same infrastructure as model serving (auto-scaling, monitoring)
+- ✅ Consistent REST interface
+
+---
+
 ## Creating a BI Dashboard (Optional)
 
 ### Databricks SQL Dashboard

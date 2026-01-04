@@ -57,5 +57,12 @@ resource "databricks_notebook" "interactive_feedback_review" {
   source   = "${path.module}/../../notebooks/04_feedback/interactive_feedback_review.py"
 }
 
+# Deploy Feedback REST Endpoint
+resource "databricks_notebook" "deploy_feedback_endpoint" {
+  path     = "/Shared/deploy-feedback-endpoint"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/04_feedback/deploy_feedback_endpoint.py"
+}
+
 # Outputs
 
