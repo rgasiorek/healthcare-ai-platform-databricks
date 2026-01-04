@@ -4,13 +4,15 @@ Production-ready X-ray pneumonia classification platform using Databricks Unity 
 
 ## Overview
 
-This project demonstrates end-to-end healthcare data engineering and ML using:
+This project demonstrates a complete production-ready MLOps platform for healthcare AI, featuring:
+- **End-to-End ML Pipeline** - Train → Deploy → Monitor → Improve
+- **A/B Testing** - Champion/Challenger pattern with traffic splitting
+- **Feedback Loop** - Real-world accuracy tracking with ground truth
 - **Unity Catalog** - Unified governance for data and AI assets
 - **Delta Lake** - ACID-compliant lakehouse storage on S3
+- **Model Serving** - REST API endpoints for real-time predictions
+- **MLflow** - Experiment tracking and model registry
 - **Terraform** - Infrastructure as Code for reproducible deployments
-- **AWS S3** - Scalable object storage for data lake
-- **AWS IAM** - Secure cross-account access control
-- **Kaggle** - Chest X-ray pneumonia dataset source
 
 ## Architecture
 
@@ -20,13 +22,15 @@ This project demonstrates end-to-end healthcare data engineering and ML using:
 healthcare_catalog_dev
 ├── bronze                           # Raw data layer
 │   ├── kaggle_xray_metadata        # Raw X-ray metadata from Kaggle
-│   └── xray_images (volume)        # Raw JPEG image files
-├── silver                          # Cleaned data layer
-│   ├── xray_metadata               # Validated X-ray metadata with labels
-│   └── image_features              # Extracted CNN features
+│   └── xray_images (volume)        # Raw JPEG image files (~1000 X-rays)
+├── models                          # ML models layer
+│   ├── pneumonia_poc_classifier    # TensorFlow/Keras CNN model
+│   └── pneumonia_poc_classifier_pytorch  # PyTorch CNN model
 └── gold                            # Business-ready layer
-    ├── pneumonia_predictions       # ML model predictions
-    └── model_performance           # Model evaluation metrics
+    ├── prediction_feedback         # Ground truth labels from radiologists
+    ├── pneumonia_classifier_predictions  # Inference table (auto-logged)
+    ├── pneumonia_classifier_payload      # Inference table (auto-logged)
+    └── model_performance_live (view)     # Real-time accuracy metrics
 ```
 
 ### Medallion Architecture (Bronze → Silver → Gold)
@@ -98,7 +102,8 @@ AWS Account (905418100642)
 | **Volume** | `xray_images` | External volume for JPEG files |
 | **Compute Cluster** | `healthcare-data-cluster-dev` | Python/ML workloads (2x i3.xlarge) |
 | **SQL Warehouse** | Serverless warehouse | SQL queries and BI dashboards |
-| **Notebooks** | 2 notebooks | Hello World + Kaggle ingestion |
+| **Notebooks** | 9 notebooks | Ingestion, training, deployment, monitoring, demo |
+| **Jobs** | 2 Databricks Jobs | Model deployment automation |
 
 ### File Structure
 
@@ -261,16 +266,83 @@ All resources use environment postfix for multi-environment support:
 
 To deploy to different environment: Update `variables.tf` → `environment = "pilot"` → `terraform apply`
 
+## MLOps Pipeline
+
+### Complete ML Workflow
+
+```
+1. TRAIN
+   └─► Train models (Keras Champion + PyTorch Challenger)
+       Register in MLflow Model Registry with Unity Catalog
+
+2. DEPLOY
+   └─► Create A/B testing endpoint (Databricks Model Serving)
+       Champion: 50% traffic | Challenger: 50% traffic
+       Enable inference logging (auto_capture)
+
+3. PREDICT
+   └─► REST API: Make predictions
+       Capture request_id from response headers
+       Return prediction + request_id to user
+
+4. COLLECT FEEDBACK
+   └─► Radiologist reviews X-ray (hours/days later)
+       submit_feedback(request_id, "true-positive", ...)
+       Stored in prediction_feedback table
+
+5. ANALYZE
+   └─► JOIN inference_table + feedback_table
+       Calculate per-model accuracy
+       Statistical significance testing (Chi-square)
+
+6. DECIDE & PROMOTE
+   └─► Challenger is better? Promote to Champion
+       Update traffic: Challenger 90%, New_Challenger 10%
+       Continuous improvement cycle
+```
+
+### Models & Endpoints
+
+| Model | Framework | Use Case | Status |
+|-------|-----------|----------|--------|
+| `pneumonia_poc_classifier` | TensorFlow/Keras | Champion model | ✅ Deployed |
+| `pneumonia_poc_classifier_pytorch` | PyTorch | Challenger model | ✅ Deployed |
+
+**Serving Endpoints**:
+- `pneumonia-poc-classifier` - Single model endpoint
+- `pneumonia-classifier-ab-test` - A/B testing endpoint (50/50 split)
+
+### Feedback Infrastructure
+
+| Component | Purpose |
+|-----------|---------|
+| `prediction_feedback` table | Ground truth labels from radiologists |
+| `model_performance_live` view | Real-time accuracy calculation |
+| `feedback_collector.py` | BentoML-style feedback API |
+| `monitor_ab_test.py` | Champion vs Challenger comparison dashboard |
+
 ## Project Tracking
 
 All work tracked via GitHub Issues:
 
+**Infrastructure & Data**:
 - ✅ [Issue #1](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/1): Setup AWS integration for Unity Catalog
 - ✅ [Issue #2](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/2): Implement production-ready Delta tables
-- ⏳ [Issue #3](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/3): Ingest Kaggle X-ray data into Bronze
-- 📋 [Issue #4](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/4): Implement Bronze → Silver transformation
-- 📋 [Issue #5](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/5): Create BI dashboard for analytics
-- 📋 [Issue #6](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/6): Implement ML model for pneumonia classification
+- ✅ [Issue #3](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/3): Ingest Kaggle X-ray data into Bronze
+
+**ML Pipeline**:
+- ✅ [Issue #6](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/6): Implement ML model POC (TensorFlow)
+- ✅ [Issue #7](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/7): Fix serverless endpoint cold start timeout
+- ✅ [Issue #8](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/8): Fix REST API payload format for Keras
+- ✅ [Issue #9](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/9): Add PyTorch model for framework comparison
+- ✅ [Issue #10](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/10): Fix Unity Catalog model signature requirement
+
+**A/B Testing & Feedback Loop**:
+- ✅ [Issue #11](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/11): Implement Champion/Challenger A/B testing
+- ✅ [Issue #12](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/12): Create feedback infrastructure tables
+- ✅ [Issue #13](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/13): Build BentoML-style feedback collector API
+- ✅ [Issue #14](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/14): Create monitoring dashboard for model comparison
+- ✅ [Issue #15](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/15): Update demo notebook with prediction tracking
 
 ## Exploring the Platform
 
@@ -353,16 +425,28 @@ DESCRIBE HISTORY healthcare_catalog_dev.bronze.kaggle_xray_metadata;
 
 ## Roadmap
 
+**Completed**:
 - [x] Unity Catalog with AWS S3 integration
 - [x] Environment-based naming (dev/pilot/prod)
 - [x] Production-ready Delta tables with Terraform
-- [x] Kaggle data ingestion pipeline
+- [x] Kaggle data ingestion pipeline (1000 X-rays)
+- [x] ML model training (TensorFlow + PyTorch CNNs)
+- [x] MLflow model registry integration (Unity Catalog)
+- [x] Model serving endpoints (single + A/B testing)
+- [x] Champion/Challenger A/B testing infrastructure
+- [x] Feedback loop system with ground truth tracking
+- [x] Monitoring dashboard for model comparison
+
+**Future Enhancements**:
 - [ ] Bronze → Silver transformation with data quality checks
-- [ ] BI dashboard with Databricks SQL
-- [ ] ML model training (CNN for pneumonia classification)
-- [ ] MLflow model registry integration
+- [ ] Feature engineering pipeline
+- [ ] Transfer learning with EfficientNet/ResNet
+- [ ] Hyperparameter tuning with Databricks AutoML
 - [ ] CI/CD pipeline with GitHub Actions
-- [ ] Monitoring and alerting
+- [ ] Automated model retraining on feedback
+- [ ] Real-time alerting for model drift
+- [ ] BI dashboard with Databricks SQL
+- [ ] Multi-class classification (normal/bacterial/viral)
 
 ## Troubleshooting
 
