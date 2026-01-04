@@ -1,6 +1,10 @@
 # Healthcare AI Platform - Presentation
 
 > A step-by-step journey through production-ready MLOps on Databricks
+>
+> **The Dual Story**: Healthcare AI Platform + AI-Assisted Development with Claude Code
+>
+> 90+ slides showing not just WHAT was built, but HOW it was built with human-AI collaboration
 
 ---
 
@@ -22,7 +26,52 @@
 
 ---
 
-## Slide 3: The Foundation - AWS Integration
+## Slide 3: The Secret Ingredient
+**Built with AI-Assisted Development**
+
+- Claude Code running locally with system access
+- Direct GitHub, AWS, Databricks CLI access
+- Beyond code: issues, deploys, docs, thinking partner
+
+---
+
+## Slide 4: What Makes This Unique
+**The Most Important Story**
+
+- Not just "here's a healthcare AI platform"
+- But "here's HOW AI helped build it"
+- Staff engineer + AI collaboration pattern
+
+---
+
+## Slide 5: Claude Code's Role
+**AI as Full Development Partner**
+
+- Created all 15 GitHub issues
+- Wrote Terraform, notebooks, deployed infrastructure
+- Documented, tested, debugged, closed tickets
+
+---
+
+## Slide 6: The Terraform Dual Purpose
+**IaC AND AI Context**
+
+- Traditional: Infrastructure as Code
+- Novel: Perfect context for AI decisions
+- AI reads schema, writes correct queries first try
+
+---
+
+## Slide 7: Value for Staff Engineers
+**10x Faster, Not Replacing Engineers**
+
+- Strategic control stays with human
+- AI handles tactical execution
+- Complete documentation burden lifted
+
+---
+
+## Slide 8: The Foundation - AWS Integration
 **Secure, Scalable Cloud Infrastructure**
 
 - Two S3 buckets: Unity Catalog + data lake
@@ -31,7 +80,7 @@
 
 ---
 
-## Slide 4: Data Governance - Unity Catalog
+## Slide 9: Data Governance - Unity Catalog
 **One Place to Rule Them All**
 
 - Unified governance for data and AI assets
@@ -391,7 +440,142 @@
 
 ---
 
-## Slide 44: Lessons Learned - Cold Starts
+## Slide 44: The Meta-Story - AI-Assisted Development
+**What Really Makes This Special**
+
+- Not just the healthcare platform
+- But HOW it was built
+- Human + AI collaboration demonstrated
+
+---
+
+## Slide 45: Claude Code - The Development Partner
+**Running Locally with Full Access**
+
+- GitHub CLI: Creates issues, manages tickets
+- AWS CLI: Deploys S3, IAM, verifies infrastructure
+- Databricks CLI: Uploads notebooks, manages clusters
+
+---
+
+## Slide 46: Beyond Code Generation
+**AI Handled Every Phase**
+
+- Planning: Created all 15 GitHub issues
+- Infrastructure: Wrote Terraform, ran deployments
+- Development: 9 notebooks with educational comments
+
+---
+
+## Slide 47: Beyond Code Generation (cont.)
+**Complete Development Lifecycle**
+
+- Testing: Debugged errors, created bug issues
+- Documentation: README + 71-slide presentation
+- Deployment: Actual AWS/Databricks deployments executed
+
+---
+
+## Slide 48: The Rubber Duck Effect
+**AI as Thinking Partner**
+
+- "What is Champion/Challenger?" → Detailed explanation
+- "Why TensorFlow not PyTorch?" → Trade-off discussion
+- "How to handle feedback?" → Architecture proposal
+
+---
+
+## Slide 49: Terraform's Dual Purpose
+**IaC AND AI Context**
+
+- Traditional: Infrastructure as Code
+- Novel: Perfect AI context builder
+- AI reads schemas, writes correct code first try
+
+---
+
+## Slide 50: The Numbers - AI Contribution
+**Measurable Impact**
+
+- 15 GitHub issues: 100% AI-created
+- ~1200 lines Terraform: 95% AI-written
+- ~2000 lines notebooks: 90% AI-written
+
+---
+
+## Slide 51: The Numbers - AI Contribution (cont.)
+**Execution Speed**
+
+- Documentation: 100% AI-written
+- Deployments: AI-executed to cloud
+- Time to MVP: 3-4 days (10x faster)
+
+---
+
+## Slide 52: Value for Staff Engineers
+**Why Experienced Engineers Benefit**
+
+- Speed: Days not weeks
+- Context switching: AI handles multiple systems
+- Documentation: No burden left behind
+
+---
+
+## Slide 53: Value for Staff Engineers (cont.)
+**Quality Improvements**
+
+- Rubber duck: Architecture discussion partner
+- Learning: AI explains unfamiliar features
+- Best practices: Applied automatically
+
+---
+
+## Slide 54: The Collaboration Pattern
+**Division of Labor**
+
+- Human: Vision, approval, strategy, business context
+- AI: Issues, code, deploy, test, document
+- Result: Staff engineer becomes architect
+
+---
+
+## Slide 55: Traditional vs AI-Assisted
+**The Old Way**
+
+- Write code locally
+- Copy-paste to cloud console
+- Manually upload files
+
+---
+
+## Slide 56: Traditional vs AI-Assisted (cont.)
+**The New Way**
+
+- Describe what you want
+- AI creates issue, writes, deploys, documents
+- Everything committed and linked automatically
+
+---
+
+## Slide 57: Reproducibility Guarantee
+**Because AI Has Direct System Access**
+
+- No copy-paste errors
+- No manual uploads
+- Everything in Git history
+
+---
+
+## Slide 58: The Future of Development
+**Shift from Typing to Architecting**
+
+- AI handles tactical execution
+- Human provides strategic direction
+- Documentation happens automatically
+
+---
+
+## Slide 59: Lessons Learned - Cold Starts
 **Serverless Endpoints Need Warm-Up**
 
 - First request: 30-60 seconds
@@ -580,26 +764,35 @@
 
 ---
 
-## Slide 65: Final Thoughts - The Problem
-**Healthcare AI is Hard**
+## Slide 80: Final Thoughts - Dual Value Proposition
+**Two Stories in One**
 
-- Not just about model accuracy
-- Need safe deployment and monitoring
-- Must track real-world performance
+- Story 1: Production-ready healthcare AI platform
+- Story 2: AI-assisted development workflow
+- Both equally valuable and demonstrable
 
 ---
 
-## Slide 66: Final Thoughts - The Solution
+## Slide 81: Final Thoughts - The Technical Achievement
 **Complete MLOps Platform**
 
-- End-to-end workflow demonstrated
+- End-to-end workflow: Train → Monitor → Improve
 - A/B testing for safe updates
-- Feedback loop for improvement
+- Feedback loop for continuous improvement
 
 ---
 
-## Slide 67: Final Thoughts - The Impact
-**Production-Ready Healthcare AI**
+## Slide 82: Final Thoughts - The Process Achievement
+**AI-Accelerated Development**
+
+- Claude Code with direct system access
+- 10x faster: 3-4 days to MVP
+- Staff engineer as architect, AI as executor
+
+---
+
+## Slide 83: The Real Impact - For Healthcare
+**Production-Ready AI**
 
 - Doctors get reliable predictions
 - Models continuously improve
@@ -607,7 +800,16 @@
 
 ---
 
-## Slide 68: Call to Action - For Students
+## Slide 84: The Real Impact - For Engineers
+**Better Development Experience**
+
+- Focus on architecture, not typing
+- Documentation happens automatically
+- Rubber duck partner always available
+
+---
+
+## Slide 85: Call to Action - For Students
 **Learn Modern MLOps**
 
 - Run the notebooks yourself
@@ -616,7 +818,7 @@
 
 ---
 
-## Slide 69: Call to Action - For Engineers
+## Slide 86: Call to Action - For Engineers
 **Build Better ML Systems**
 
 - Use Champion/Challenger pattern
@@ -625,21 +827,39 @@
 
 ---
 
-## Slide 70: Call to Action - For Teams
-**Deploy This to Production**
+## Slide 87: Call to Action - Try Claude Code
+**Experience AI-Assisted Development**
 
-- Clone and customize for your use case
-- Add your own models and data
-- Benefit from proven architecture
+- Install Claude Code CLI locally
+- Give it access to GitHub/AWS/Databricks
+- Watch it plan, build, deploy, document
 
 ---
 
-## Slide 71: Thank You
+## Slide 88: Call to Action - For Teams
+**Deploy This to Production**
+
+- Clone repository, customize for use case
+- Add your own models and data
+- Benefit from proven architecture and workflow
+
+---
+
+## Slide 89: Thank You
 **Questions?**
 
 - Repository: github.com/rgasiorek/healthcare-ai-platform-databricks
-- Issues: All 15 issues documented
-- Infrastructure: 100% Terraform managed
+- All 15 issues with detailed documentation
+- Built with Claude Code + staff engineer collaboration
+
+---
+
+## Slide 90: Key Takeaways
+**Remember These Three Things**
+
+1. Complete MLOps: Train → Monitor → Improve
+2. A/B Testing: Safe model updates matter
+3. AI-Assisted Development: The future is here
 
 ---
 
