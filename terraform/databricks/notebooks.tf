@@ -29,11 +29,18 @@ resource "databricks_notebook" "train_poc_model_pytorch" {
   source   = "${path.module}/../../notebooks/03_ml/train_poc_model_pytorch.py"
 }
 
-# ML POC Serving Endpoint Notebook
+# ML POC Serving Endpoint Notebook (Single Model)
 resource "databricks_notebook" "deploy_serving_endpoint" {
   path     = "/Shared/deploy-serving-endpoint"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/03_ml/deploy_serving_endpoint.py"
+}
+
+# ML A/B Testing Endpoint (Champion/Challenger)
+resource "databricks_notebook" "deploy_ab_testing_endpoint" {
+  path     = "/Shared/deploy-ab-testing-endpoint"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/03_ml/deploy_ab_testing_endpoint.py"
 }
 
 # ML Demo: SDK vs REST API Model Usage
