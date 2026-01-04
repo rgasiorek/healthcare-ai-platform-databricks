@@ -663,3 +663,353 @@ print(f"Prediction: {label} (confidence: {max(pred_prob, 1-pred_prob):.1%})")
 # MAGIC - How would you handle 1 million X-rays?
 # MAGIC - What if you need < 100ms latency?
 # MAGIC - How to balance cost vs performance?
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ---
+# MAGIC ## NEW: Prediction Tracking & Feedback Loop
+# MAGIC
+# MAGIC In production, we need to:
+# MAGIC 1. **Track which predictions we made** (so we can link feedback later)
+# MAGIC 2. **Collect ground truth labels** (from radiologists/doctors)
+# MAGIC 3. **Link feedback back to the model** that made the prediction
+# MAGIC 4. **Measure real-world accuracy** and compare models
+# MAGIC
+# MAGIC This is especially critical for **A/B testing** when multiple models serve the same endpoint!
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 1: Capturing Prediction IDs from REST API
+# MAGIC
+# MAGIC Every Databricks Model Serving request gets a unique `request_id` that we can use to link feedback.
+
+# COMMAND ----------
+# Make a prediction and capture the request_id
+test_image_path = test_samples[0].file_path
+img_array = preprocess_image(test_image_path, IMAGE_SIZE)
+
+payload = {"inputs": [img_array.tolist()]}
+
+response = requests.post(
+    invocation_url,
+    headers={"Authorization": f"Bearer {token}"},
+    json=payload
+)
+
+if response.status_code == 200:
+    # Get prediction
+    result = response.json()
+    pred_prob = result['predictions'][0][0]
+    pred_label = "PNEUMONIA" if pred_prob > 0.5 else "NORMAL"
+
+    # CRITICAL: Capture the request_id from response headers
+    request_id = response.headers.get('x-databricks-request-id')
+
+    print("✅ Prediction Made:")
+    print(f"   Request ID: {request_id}")
+    print(f"   Predicted: {pred_label}")
+    print(f"   Confidence: {max(pred_prob, 1-pred_prob):.1%}")
+    print(f"   P(PNEUMONIA): {pred_prob:.3f}")
+    print()
+    print("💡 SAVE THIS REQUEST_ID! You'll need it to submit feedback later.")
+    print(f"   In a real app, you would: display_to_user(prediction, request_id)")
+else:
+    print(f"❌ Prediction failed: {response.status_code}")
+    print(response.text)
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 2: Submitting Feedback (After Radiologist Review)
+# MAGIC
+# MAGIC Later, when a radiologist reviews the X-ray and provides ground truth, we submit feedback.
+
+# COMMAND ----------
+# Install feedback collector (if not already available)
+import sys
+sys.path.append('/Workspace/Shared')
+
+# Import the feedback collector
+try:
+    from feedback_collector import submit_feedback
+    print("✅ Feedback collector loaded")
+except ImportError:
+    print("⚠️  Feedback collector not found. Upload it first using:")
+    print("   /tmp/upload_feedback_collector.py")
+
+# COMMAND ----------
+# Simulate: Radiologist reviews the X-ray and confirms diagnosis
+# In real app, this would happen hours/days later
+
+# Example 1: Model was CORRECT
+# request_id from earlier: 'abc-123-def-456'
+# Radiologist confirms: TRUE PNEUMONIA
+
+feedback_id_1 = submit_feedback(
+    prediction_id=request_id,  # The request_id we captured earlier
+    feedback_type="true-positive",  # Model said PNEUMONIA, it WAS pneumonia
+    radiologist_id="DR001",
+    confidence="confirmed",
+    feedback_source="expert_review",
+    notes="Clear consolidation in right lower lobe"
+)
+
+print(f"✅ Feedback submitted: {feedback_id_1}")
+print(f"   Prediction: {request_id} → Ground Truth: PNEUMONIA")
+
+# COMMAND ----------
+# Example 2: Model was WRONG (False Positive)
+# Make another prediction first
+img_array_2 = preprocess_image(test_samples[1].file_path, IMAGE_SIZE)
+response_2 = requests.post(
+    invocation_url,
+    headers={"Authorization": f"Bearer {token}"},
+    json={"inputs": [img_array_2.tolist()]}
+)
+
+if response_2.status_code == 200:
+    request_id_2 = response_2.headers.get('x-databricks-request-id')
+    pred_prob_2 = response_2.json()['predictions'][0][0]
+    pred_label_2 = "PNEUMONIA" if pred_prob_2 > 0.5 else "NORMAL"
+
+    print(f"Prediction 2: {pred_label_2} (request_id: {request_id_2})")
+
+    # Radiologist says: "Actually, this was NORMAL (false positive)"
+    if pred_label_2 == "PNEUMONIA":
+        feedback_id_2 = submit_feedback(
+            prediction_id=request_id_2,
+            feedback_type="false-positive",  # Model said PNEUMONIA, actually NORMAL
+            radiologist_id="DR001",
+            confidence="confirmed",
+            notes="Artifact from patient movement, not infection"
+        )
+        print(f"✅ Feedback (false positive): {feedback_id_2}")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 3: Understanding A/B Testing - Which Model Served?
+# MAGIC
+# MAGIC When using A/B testing endpoints (Champion/Challenger), Databricks automatically logs:
+# MAGIC - Which model served each request
+# MAGIC - The request_id
+# MAGIC - The prediction
+# MAGIC
+# MAGIC This is stored in the **inference table**.
+
+# COMMAND ----------
+# Query the inference table to see which model served our prediction
+from pyspark.sql.functions import col
+
+# Databricks auto-creates inference tables when auto_capture is enabled
+# Format: {catalog}.{schema}.{table_prefix}_payload and {table_prefix}_predictions
+inference_table = "healthcare_catalog_dev.gold.pneumonia_classifier_predictions"
+
+try:
+    # Check if our request_id is logged (may take 1-2 minutes for data to appear)
+    inference_df = spark.sql(f"""
+        SELECT
+            request_id,
+            served_model_name,  -- CRITICAL: Which model served this request
+            timestamp,
+            response
+        FROM {inference_table}
+        WHERE request_id = '{request_id}'
+    """)
+
+    if inference_df.count() > 0:
+        model_info = inference_df.collect()[0]
+        print("✅ Found prediction in inference table:")
+        print(f"   Request ID: {model_info.request_id}")
+        print(f"   Model: {model_info.served_model_name}")
+        print(f"   Timestamp: {model_info.timestamp}")
+        print()
+        print("💡 This tells us WHICH MODEL (Champion or Challenger) made this prediction!")
+    else:
+        print("⏳ Prediction not yet in inference table (data appears within 1-2 minutes)")
+        print(f"   Check later with: SELECT * FROM {inference_table} WHERE request_id = '{request_id}'")
+
+except Exception as e:
+    print(f"⚠️  Could not query inference table: {e}")
+    print(f"   Make sure A/B testing endpoint has auto_capture enabled")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 4: The Complete Feedback Loop
+# MAGIC
+# MAGIC Now we can JOIN predictions with feedback to calculate per-model accuracy:
+
+# COMMAND ----------
+# Query model performance (joins inference table with feedback)
+performance_query = """
+SELECT
+    p.request_id,
+    p.served_model_name,                          -- Which model made the prediction
+    CAST(p.response:predictions[0][0] AS DOUBLE) as prediction_score,
+    CASE
+        WHEN CAST(p.response:predictions[0][0] AS DOUBLE) > 0.5
+        THEN 'PNEUMONIA'
+        ELSE 'NORMAL'
+    END as predicted_label,
+    f.ground_truth,                                -- What it actually was (from radiologist)
+    f.feedback_type,                               -- TP/FP/TN/FN
+    CASE
+        WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN TRUE
+        WHEN f.feedback_type IN ('false-positive', 'false-negative') THEN FALSE
+        ELSE NULL
+    END as is_correct,
+    f.radiologist_id,
+    f.confidence,
+    p.timestamp as prediction_time,
+    f.timestamp as feedback_time
+FROM healthcare_catalog_dev.gold.pneumonia_classifier_predictions p
+LEFT JOIN healthcare_catalog_dev.gold.prediction_feedback f
+    ON p.request_id = f.prediction_id
+WHERE f.feedback_id IS NOT NULL  -- Only predictions with feedback
+ORDER BY p.timestamp DESC
+LIMIT 10
+"""
+
+try:
+    performance_df = spark.sql(performance_query)
+
+    print("=" * 100)
+    print("PREDICTIONS WITH FEEDBACK (Most Recent)")
+    print("=" * 100)
+
+    if performance_df.count() > 0:
+        performance_df.show(truncate=False)
+
+        # Calculate accuracy per model
+        accuracy_query = """
+        SELECT
+            served_model_name,
+            COUNT(*) as total_predictions_with_feedback,
+            SUM(CASE WHEN is_correct = TRUE THEN 1 ELSE 0 END) as correct_predictions,
+            ROUND(AVG(CASE WHEN is_correct = TRUE THEN 1.0 ELSE 0.0 END) * 100, 2) as accuracy_pct
+        FROM (
+            SELECT
+                p.served_model_name,
+                CASE
+                    WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN TRUE
+                    WHEN f.feedback_type IN ('false-positive', 'false-negative') THEN FALSE
+                    ELSE NULL
+                END as is_correct
+            FROM healthcare_catalog_dev.gold.pneumonia_classifier_predictions p
+            LEFT JOIN healthcare_catalog_dev.gold.prediction_feedback f
+                ON p.request_id = f.prediction_id
+            WHERE f.feedback_id IS NOT NULL
+        )
+        GROUP BY served_model_name
+        ORDER BY accuracy_pct DESC
+        """
+
+        accuracy_df = spark.sql(accuracy_query)
+
+        print("\n" + "=" * 100)
+        print("MODEL ACCURACY COMPARISON (Based on Real Feedback)")
+        print("=" * 100)
+        accuracy_df.show(truncate=False)
+
+        print("\n💡 This is how we decide which model to promote:")
+        print("   - Champion: Current production model")
+        print("   - Challenger: New model being tested")
+        print("   - If Challenger accuracy > Champion → Promote Challenger")
+        print("   - If Challenger accuracy < Champion → Keep Champion")
+
+    else:
+        print("No predictions with feedback yet.")
+        print("Submit some feedback using the examples above!")
+
+except Exception as e:
+    print(f"⚠️  Error querying performance: {e}")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 5: Practical Exercise for Pupils
+# MAGIC
+# MAGIC **Task**: Implement a complete feedback tracking system
+# MAGIC
+# MAGIC 1. **Make 10 predictions** via REST API
+# MAGIC    - Save all request_ids to a list
+# MAGIC    - Print predictions
+# MAGIC
+# MAGIC 2. **Simulate radiologist review**
+# MAGIC    - For each prediction, submit feedback
+# MAGIC    - Mix of correct (TP/TN) and incorrect (FP/FN)
+# MAGIC
+# MAGIC 3. **Calculate model accuracy**
+# MAGIC    - Query the performance view
+# MAGIC    - Calculate: correct / total
+# MAGIC
+# MAGIC 4. **Visualize results**
+# MAGIC    - Create a confusion matrix
+# MAGIC    - Plot accuracy over time
+# MAGIC
+# MAGIC **Bonus Challenge**:
+# MAGIC - Build a simple function that takes a request_id and ground_truth
+# MAGIC - Automatically determines feedback_type (TP/FP/TN/FN)
+# MAGIC - Submits feedback with proper classification
+# MAGIC
+# MAGIC **Discussion Questions**:
+# MAGIC - How long should we collect feedback before promoting a Challenger?
+# MAGIC - What if Champion has 95% accuracy and Challenger has 96%? (Is 1% improvement significant?)
+# MAGIC - How to handle cases where radiologists disagree?
+# MAGIC - What if we have multiple radiologists with different accuracy rates?
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ---
+# MAGIC ## Summary: Complete MLOps Cycle
+# MAGIC
+# MAGIC We've now covered the **complete production ML workflow**:
+# MAGIC
+# MAGIC ```
+# MAGIC ┌─────────────────────────────────────────────────────────────────┐
+# MAGIC │                   COMPLETE MLOPS CYCLE                          │
+# MAGIC └─────────────────────────────────────────────────────────────────┘
+# MAGIC
+# MAGIC 1. TRAIN
+# MAGIC    └─► Train models (Keras Champion + PyTorch Challenger)
+# MAGIC        Register in MLflow Model Registry
+# MAGIC
+# MAGIC 2. DEPLOY
+# MAGIC    └─► Create A/B testing endpoint
+# MAGIC        Champion: 90% traffic
+# MAGIC        Challenger: 10% traffic
+# MAGIC        Enable inference logging (auto_capture)
+# MAGIC
+# MAGIC 3. PREDICT
+# MAGIC    └─► REST API: Make predictions
+# MAGIC        Capture request_id from response headers
+# MAGIC        Return prediction + request_id to user
+# MAGIC
+# MAGIC 4. COLLECT FEEDBACK
+# MAGIC    └─► Radiologist reviews X-ray (hours/days later)
+# MAGIC        submit_feedback(request_id, "true-positive", ...)
+# MAGIC        Stored in prediction_feedback table
+# MAGIC
+# MAGIC 5. ANALYZE
+# MAGIC    └─► JOIN inference_table + feedback_table
+# MAGIC        Calculate per-model accuracy
+# MAGIC        Champion: 92.3% accurate
+# MAGIC        Challenger: 94.7% accurate
+# MAGIC
+# MAGIC 6. DECIDE & PROMOTE
+# MAGIC    └─► Challenger is better! Promote to Champion
+# MAGIC        Update traffic: Challenger 90%, New_Challenger 10%
+# MAGIC        Continuous improvement!
+# MAGIC
+# MAGIC 7. MONITOR
+# MAGIC    └─► Track performance over time
+# MAGIC        Detect model drift
+# MAGIC        Alert if accuracy drops
+# MAGIC ```
+# MAGIC
+# MAGIC **Key Databricks Features Used**:
+# MAGIC - ✅ MLflow Model Registry (versioning)
+# MAGIC - ✅ Model Serving (REST API endpoints)
+# MAGIC - ✅ A/B Testing (traffic splitting)
+# MAGIC - ✅ Inference Tables (auto-capture predictions)
+# MAGIC - ✅ Delta Tables (feedback storage with ACID)
+# MAGIC - ✅ Unity Catalog (governance)
+# MAGIC
+# MAGIC **This is production-ready MLOps!** 🎉
