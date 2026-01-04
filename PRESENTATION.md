@@ -26,48 +26,30 @@
 
 ---
 
-## Slide 3: The Secret Ingredient
-**Built with AI-Assisted Development**
+## Slide 3: The Project Goal
+**Zero Clicking in Cloud Consoles**
 
-- Claude Code running locally with system access
-- Direct GitHub, AWS, Databricks CLI access
-- Beyond code: issues, deploys, docs, thinking partner
-
----
-
-## Slide 4: What Makes This Unique
-**The Most Important Story**
-
-- Not just "here's a healthcare AI platform"
-- But "here's HOW AI helped build it"
-- Staff engineer + AI collaboration pattern
+- Eliminate manual AWS/Databricks console operations
+- 100% automation from conversation to deployment
+- Everything versioned, reproducible, documented
 
 ---
 
-## Slide 5: Claude Code's Role
-**AI as Full Development Partner**
+## Slide 4: How AI Enabled This
+**Claude Code with Direct System Access**
 
-- Created all 15 GitHub issues
-- Wrote Terraform, notebooks, deployed infrastructure
-- Documented, tested, debugged, closed tickets
-
----
-
-## Slide 6: The Terraform Dual Purpose
-**IaC AND AI Context**
-
-- Traditional: Infrastructure as Code
-- Novel: Perfect context for AI decisions
-- AI reads schema, writes correct queries first try
+- Full SDLC automation (Plan → Deploy → Document)
+- Enables MLOps experimentation (days, not months)
+- Terraform as dual-purpose: IaC + AI context
 
 ---
 
-## Slide 7: Value for Staff Engineers
-**10x Faster, Not Replacing Engineers**
+## Slide 5: The Strategic Value
+**What This Demonstrates**
 
-- Strategic control stays with human
-- AI handles tactical execution
-- Complete documentation burden lifted
+- Human: Strategic decisions, architecture, approvals
+- AI: SDLC automation, zero-click execution
+- Result: Staff engineer experiments, AI automates
 
 ---
 
@@ -440,138 +422,57 @@
 
 ---
 
-## Slide 44: The Meta-Story - AI-Assisted Development
-**What Really Makes This Special**
+## Slide 44: The Meta-Story
+**Zero-Click Automation Achieved**
 
-- Not just the healthcare platform
-- But HOW it was built
-- Human + AI collaboration demonstrated
-
----
-
-## Slide 45: Claude Code - The Development Partner
-**Running Locally with Full Access**
-
-- GitHub CLI: Creates issues, manages tickets
-- AWS CLI: Deploys S3, IAM, verifies infrastructure
-- Databricks CLI: Uploads notebooks, manages clusters
+- Project goal: Eliminate console clicking
+- Claude Code with CLI access enabled this
+- 100% automation from conversation to deployment
 
 ---
 
-## Slide 46: Beyond Code Generation
-**AI Handled Every Phase**
+## Slide 45: Full SDLC Automation
+**AI Across Entire Workflow**
 
-- Planning: Created all 15 GitHub issues
-- Infrastructure: Wrote Terraform, ran deployments
-- Development: 9 notebooks with educational comments
-
----
-
-## Slide 47: Beyond Code Generation (cont.)
-**Complete Development Lifecycle**
-
-- Testing: Debugged errors, created bug issues
-- Documentation: README + 71-slide presentation
-- Deployment: Actual AWS/Databricks deployments executed
+- Plan → Build → Deploy → Test → Document
+- Testing: AI runs OR guides with clear scenarios
+- Everything versioned and reproducible
 
 ---
 
-## Slide 48: The Rubber Duck Effect
-**AI as Thinking Partner**
+## Slide 46: Testing Strategy
+**Two Approaches**
 
-- "What is Champion/Challenger?" → Detailed explanation
-- "Why TensorFlow not PyTorch?" → Trade-off discussion
-- "How to handle feedback?" → Architecture proposal
-
----
-
-## Slide 49: Terraform's Dual Purpose
-**IaC AND AI Context**
-
-- Traditional: Infrastructure as Code
-- Novel: Perfect AI context builder
-- AI reads schemas, writes correct code first try
+- AI runs automated tests based on requirements
+- OR AI guides user with closed-ended test scenarios
+- Pass/fail criteria match original user needs
 
 ---
 
-## Slide 50: The Numbers - AI Contribution
-**Measurable Impact**
+## Slide 47: MLOps Experimentation Enabled
+**Rapid Pattern Testing**
 
-- 15 GitHub issues: 100% AI-created
-- ~1200 lines Terraform: 95% AI-written
-- ~2000 lines notebooks: 90% AI-written
-
----
-
-## Slide 51: The Numbers - AI Contribution (cont.)
-**Execution Speed**
-
-- Documentation: 100% AI-written
-- Deployments: AI-executed to cloud
-- Time to MVP: 3-4 days (10x faster)
+- A/B testing implemented in days
+- Multiple frameworks (TensorFlow + PyTorch) easily compared
+- Staff engineer experiments, AI automates execution
 
 ---
 
-## Slide 52: Value for Staff Engineers
-**Why Experienced Engineers Benefit**
+## Slide 48: Terraform's Dual Role
+**Strategic Innovation**
 
-- Speed: Days not weeks
-- Context switching: AI handles multiple systems
-- Documentation: No burden left behind
-
----
-
-## Slide 53: Value for Staff Engineers (cont.)
-**Quality Improvements**
-
-- Rubber duck: Architecture discussion partner
-- Learning: AI explains unfamiliar features
-- Best practices: Applied automatically
+- Infrastructure as Code (traditional)
+- AI context builder (novel)
+- Result: Correct code first try
 
 ---
 
-## Slide 54: The Collaboration Pattern
-**Division of Labor**
+## Slide 49: The Strategic Shift
+**Human vs AI Roles**
 
-- Human: Vision, approval, strategy, business context
-- AI: Issues, code, deploy, test, document
-- Result: Staff engineer becomes architect
-
----
-
-## Slide 55: Traditional vs AI-Assisted
-**The Old Way**
-
-- Write code locally
-- Copy-paste to cloud console
-- Manually upload files
-
----
-
-## Slide 56: Traditional vs AI-Assisted (cont.)
-**The New Way**
-
-- Describe what you want
-- AI creates issue, writes, deploys, documents
-- Everything committed and linked automatically
-
----
-
-## Slide 57: Reproducibility Guarantee
-**Because AI Has Direct System Access**
-
-- No copy-paste errors
-- No manual uploads
-- Everything in Git history
-
----
-
-## Slide 58: The Future of Development
-**Shift from Typing to Architecting**
-
-- AI handles tactical execution
-- Human provides strategic direction
-- Documentation happens automatically
+- Human: Vision, architecture, strategic decisions
+- AI: SDLC automation, deployment, documentation, testing
+- Result: Engineer becomes architect, not typist
 
 ---
 
@@ -764,52 +665,34 @@
 
 ---
 
-## Slide 80: Final Thoughts - Dual Value Proposition
-**Two Stories in One**
+## Slide 65: Final Thoughts - Dual Value
+**Two Achievements in One**
 
-- Story 1: Production-ready healthcare AI platform
-- Story 2: AI-assisted development workflow
-- Both equally valuable and demonstrable
+- Healthcare AI: Production MLOps platform
+- Zero-click automation: SDLC workflow achieved
+- Both demonstrable and reproducible
 
 ---
 
-## Slide 81: Final Thoughts - The Technical Achievement
+## Slide 66: The Technical Achievement
 **Complete MLOps Platform**
 
-- End-to-end workflow: Train → Monitor → Improve
+- Train → Monitor → Improve cycle
 - A/B testing for safe updates
 - Feedback loop for continuous improvement
 
 ---
 
-## Slide 82: Final Thoughts - The Process Achievement
-**AI-Accelerated Development**
+## Slide 67: The Process Achievement
+**Zero-Click Automation**
 
-- Claude Code with direct system access
-- 10x faster: 3-4 days to MVP
-- Staff engineer as architect, AI as executor
-
----
-
-## Slide 83: The Real Impact - For Healthcare
-**Production-Ready AI**
-
-- Doctors get reliable predictions
-- Models continuously improve
-- Platform scales to real hospitals
+- Goal: Eliminate console clicking
+- Result: 100% automation achieved
+- Staff engineer experiments, AI executes
 
 ---
 
-## Slide 84: The Real Impact - For Engineers
-**Better Development Experience**
-
-- Focus on architecture, not typing
-- Documentation happens automatically
-- Rubber duck partner always available
-
----
-
-## Slide 85: Call to Action - For Students
+## Slide 68: Call to Action - For Students
 **Learn Modern MLOps**
 
 - Run the notebooks yourself
@@ -818,48 +701,39 @@
 
 ---
 
-## Slide 86: Call to Action - For Engineers
-**Build Better ML Systems**
+## Slide 69: Call to Action - For Engineers
+**Achieve Zero-Click Automation**
 
-- Use Champion/Challenger pattern
-- Implement feedback loops
-- Track real-world accuracy
-
----
-
-## Slide 87: Call to Action - Try Claude Code
-**Experience AI-Assisted Development**
-
-- Install Claude Code CLI locally
-- Give it access to GitHub/AWS/Databricks
-- Watch it plan, build, deploy, document
+- Eliminate manual console operations
+- Use AI for SDLC automation
+- Focus on architecture, not clicking
 
 ---
 
-## Slide 88: Call to Action - For Teams
+## Slide 70: Call to Action - For Teams
 **Deploy This to Production**
 
 - Clone repository, customize for use case
-- Add your own models and data
+- 100% Terraform managed (zero clicking)
 - Benefit from proven architecture and workflow
 
 ---
 
-## Slide 89: Thank You
+## Slide 71: Thank You
 **Questions?**
 
 - Repository: github.com/rgasiorek/healthcare-ai-platform-databricks
-- All 15 issues with detailed documentation
-- Built with Claude Code + staff engineer collaboration
+- 100% automation achieved (zero clicking)
+- Healthcare AI + SDLC automation demonstrated
 
 ---
 
-## Slide 90: Key Takeaways
+## Slide 72: Key Takeaways
 **Remember These Three Things**
 
-1. Complete MLOps: Train → Monitor → Improve
-2. A/B Testing: Safe model updates matter
-3. AI-Assisted Development: The future is here
+1. Complete MLOps with feedback loops
+2. Zero-click automation for development workflow
+3. Human strategy + AI execution = 10x faster
 
 ---
 
