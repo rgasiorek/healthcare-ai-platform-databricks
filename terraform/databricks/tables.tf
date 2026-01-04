@@ -395,6 +395,85 @@ resource "databricks_sql_table" "gold_model_performance" {
   depends_on = [databricks_external_location.gold]
 }
 
+# Gold Layer: Prediction Feedback Table
+# Stores ground truth labels from radiologists for model predictions
+resource "databricks_sql_table" "gold_prediction_feedback" {
+  catalog_name = databricks_catalog.healthcare.name
+  schema_name  = databricks_schema.gold.name
+  name         = "prediction_feedback"
+  table_type   = "MANAGED"
+  data_source_format = "DELTA"
+
+  comment = "Ground truth labels for model predictions - enables accuracy tracking and Champion/Challenger A/B testing"
+
+  column {
+    name     = "feedback_id"
+    type     = "STRING"
+    nullable = false
+    comment  = "Unique feedback identifier (UUID)"
+  }
+
+  column {
+    name     = "prediction_id"
+    type     = "STRING"
+    nullable = false
+    comment  = "Links to Databricks request_id from inference table"
+  }
+
+  column {
+    name     = "timestamp"
+    type     = "TIMESTAMP"
+    nullable = false
+    comment  = "When feedback was submitted"
+  }
+
+  column {
+    name     = "ground_truth"
+    type     = "STRING"
+    nullable = false
+    comment  = "Actual diagnosis: NORMAL or PNEUMONIA"
+  }
+
+  column {
+    name     = "feedback_type"
+    type     = "STRING"
+    comment  = "Classification: true-positive, false-positive, true-negative, false-negative"
+  }
+
+  column {
+    name     = "radiologist_id"
+    type     = "STRING"
+    comment  = "ID of radiologist providing feedback"
+  }
+
+  column {
+    name     = "confidence"
+    type     = "STRING"
+    comment  = "Confidence level: confirmed, uncertain, needs_review"
+  }
+
+  column {
+    name     = "feedback_source"
+    type     = "STRING"
+    comment  = "How feedback was collected: api, radiologist, pathology, manual"
+  }
+
+  column {
+    name     = "notes"
+    type     = "STRING"
+    comment  = "Optional notes from radiologist"
+  }
+
+  properties = {
+    "delta.enableChangeDataFeed"           = "true"
+    "delta.autoOptimize.optimizeWrite"     = "true"
+    "delta.autoOptimize.autoCompact"       = "true"
+    "delta.writePartitionColumnsToParquet" = "true"
+  }
+
+  depends_on = [databricks_external_location.gold]
+}
+
 # Outputs for table references
 
 
