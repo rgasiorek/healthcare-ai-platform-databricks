@@ -1,12 +1,17 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Deploy Feedback REST Endpoint
+# MAGIC # Register Feedback Processor Model
 # MAGIC
-# MAGIC This notebook deploys a REST endpoint for collecting feedback on model predictions.
+# MAGIC This notebook registers the FeedbackProcessor model to MLflow.
+# MAGIC The actual endpoint deployment is managed by Terraform (infrastructure as code).
 # MAGIC
 # MAGIC **Architecture**:
 # MAGIC - Model serving endpoint: `/serving-endpoints/{model}/invocations` → Make prediction
 # MAGIC - Feedback endpoint: `/serving-endpoints/feedback/invocations` → Submit feedback
+# MAGIC
+# MAGIC **Workflow**:
+# MAGIC 1. This notebook: Register FeedbackProcessor to MLflow (one-time ML work)
+# MAGIC 2. Terraform: Deploy endpoint from registered model (infrastructure)
 # MAGIC
 # MAGIC **Why REST endpoint instead of SDK**:
 # MAGIC - Consistent interface with model serving (both REST)
@@ -53,12 +58,19 @@ class FeedbackProcessor(mlflow.pyfunc.PythonModel):
 
         Input format (JSON):
         {
-            "request_id": "abc-123-def",
-            "ground_truth": "PNEUMONIA" or "NORMAL",
-            "radiologist_id": "DR001",
-            "confidence": "confirmed" | "uncertain" | "needs_review",
-            "notes": "Optional notes"
+            "dataframe_records": [{
+                "request_id": "abc-123-def",           // Required: Prediction to link feedback to
+                "ground_truth": "PNEUMONIA" | "NORMAL", // Required: Radiologist diagnosis
+                "radiologist_id": "DR001",              // Optional: Who provided feedback
+                "confidence": "confirmed",              // Optional: Confidence level
+                "notes": "Optional notes"               // Optional: Additional context
+            }]
         }
+
+        NOTE: Databricks Model Serving limitation
+        - Ideal REST design: POST /feedback/{request_id} with ground_truth in body
+        - Current: request_id in POST body (MLflow models can't access path params)
+        - Future TODO: Custom Flask/FastAPI app for true REST design
 
         Returns:
         {
@@ -554,3 +566,109 @@ print("   1. Wait for endpoint to be READY (5-10 minutes)")
 print("   2. Test with actual request_id from model predictions")
 print("   3. Update web/mobile apps to call this endpoint")
 print("   4. Update interactive_feedback_review notebook to use REST API")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ---
+# MAGIC ## Future Enhancement: Ideal REST Design
+# MAGIC
+# MAGIC **Current Limitation**: Databricks Model Serving with MLflow models cannot access URL path parameters or query strings. All input must come via POST body.
+# MAGIC
+# MAGIC **Ideal REST API Design** (when time allows):
+# MAGIC
+# MAGIC ```
+# MAGIC POST /feedback/{request_id}
+# MAGIC Body: {
+# MAGIC   "ground_truth": "PNEUMONIA",
+# MAGIC   "radiologist_id": "DR001",
+# MAGIC   "confidence": "confirmed",
+# MAGIC   "notes": "Optional"
+# MAGIC }
+# MAGIC ```
+# MAGIC
+# MAGIC **Benefits**:
+# MAGIC - ✅ RESTful URL structure (resource identified in path)
+# MAGIC - ✅ Cleaner API (request_id not in body)
+# MAGIC - ✅ Better HTTP semantics
+# MAGIC - ✅ Easier to cache/log by URL
+# MAGIC
+# MAGIC **Implementation Options**:
+# MAGIC
+# MAGIC ### Option 1: Databricks Apps (Flask/FastAPI)
+# MAGIC ```python
+# MAGIC from flask import Flask, request, jsonify
+# MAGIC from pyspark.sql import SparkSession
+# MAGIC
+# MAGIC app = Flask(__name__)
+# MAGIC spark = SparkSession.builder.getOrCreate()
+# MAGIC
+# MAGIC @app.route('/feedback/<request_id>', methods=['POST'])
+# MAGIC def submit_feedback(request_id):
+# MAGIC     data = request.json
+# MAGIC     ground_truth = data['ground_truth']
+# MAGIC     
+# MAGIC     # Query inference table
+# MAGIC     prediction = spark.sql(f"""
+# MAGIC         SELECT predicted_diagnosis
+# MAGIC         FROM gold.pneumonia_classifier_predictions
+# MAGIC         WHERE request_id = '{request_id}'
+# MAGIC     """).collect()[0]
+# MAGIC     
+# MAGIC     # Determine feedback_type
+# MAGIC     feedback_type = calculate_feedback_type(
+# MAGIC         prediction.predicted_diagnosis,
+# MAGIC         ground_truth
+# MAGIC     )
+# MAGIC     
+# MAGIC     # Write feedback
+# MAGIC     # ... (same logic as current)
+# MAGIC     
+# MAGIC     return jsonify({
+# MAGIC         'feedback_id': feedback_id,
+# MAGIC         'feedback_type': feedback_type
+# MAGIC     })
+# MAGIC ```
+# MAGIC
+# MAGIC ### Option 2: API Gateway + Lambda (AWS)
+# MAGIC ```
+# MAGIC API Gateway:
+# MAGIC   POST /feedback/{request_id}
+# MAGIC   ↓
+# MAGIC Lambda Function:
+# MAGIC   - Connect to Databricks SQL endpoint
+# MAGIC   - Query inference table
+# MAGIC   - Determine feedback_type
+# MAGIC   - Write to feedback table via JDBC
+# MAGIC ```
+# MAGIC
+# MAGIC ### Option 3: Custom Web Service (Docker on Databricks)
+# MAGIC ```
+# MAGIC FastAPI app in Docker container:
+# MAGIC - Deployed as Databricks App
+# MAGIC - Direct Spark access
+# MAGIC - Custom URL routing
+# MAGIC - Full REST compliance
+# MAGIC ```
+# MAGIC
+# MAGIC **Trade-offs**:
+# MAGIC
+# MAGIC | Approach | Pros | Cons |
+# MAGIC |----------|------|------|
+# MAGIC | **Current (Model Serving)** | Same infra as predictions, auto-scaling, simple | Not true REST, request_id in body |
+# MAGIC | **Databricks Apps (Flask)** | True REST, full control, Spark access | Different infra, manual scaling |
+# MAGIC | **API Gateway + Lambda** | True REST, serverless | Extra AWS cost, JDBC overhead |
+# MAGIC | **Docker on Databricks** | True REST, Spark access | More complex deployment |
+# MAGIC
+# MAGIC **Recommendation**:
+# MAGIC - **Now**: Use current Model Serving approach (consistency with prediction endpoints)
+# MAGIC - **Later**: Migrate to Databricks Apps with Flask/FastAPI when team has bandwidth
+# MAGIC - **Priority**: Medium (current approach works, this is API aesthetics)
+# MAGIC
+# MAGIC **Estimated Effort**: 1-2 days for Flask/FastAPI implementation + testing
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ---
+# MAGIC **End of Notebook**
+# MAGIC
+# MAGIC Next: Deploy endpoint via Terraform (`terraform/databricks/endpoints.tf`)
