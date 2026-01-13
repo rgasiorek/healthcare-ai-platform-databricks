@@ -1,13 +1,43 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Champion/Challenger A/B Testing Endpoint
+# MAGIC # Champion/Challenger A/B Testing Endpoint - DEPRECATED
 # MAGIC
-# MAGIC This notebook deploys BOTH models (Keras and PyTorch) behind a single serving endpoint
-# MAGIC with traffic splitting for A/B testing.
+# MAGIC ⚠️ **This notebook is DEPRECATED for endpoint deployment.**
+# MAGIC
+# MAGIC ## New Architecture (Infrastructure as Code)
+# MAGIC
+# MAGIC **Endpoint deployment is now handled by Terraform** (`terraform/databricks/endpoints.tf`).
+# MAGIC
+# MAGIC This follows proper separation of concerns:
+# MAGIC - **Notebooks** (ML work): Train models, register to MLflow
+# MAGIC - **Terraform** (Infrastructure): Deploy endpoints, configure traffic
+# MAGIC
+# MAGIC ### To Deploy Endpoints:
+# MAGIC
+# MAGIC ```bash
+# MAGIC # After training models (run training notebooks first):
+# MAGIC terraform apply
+# MAGIC ```
+# MAGIC
+# MAGIC Terraform will automatically:
+# MAGIC 1. Deploy A/B testing endpoint (`pneumonia-classifier-ab-test`)
+# MAGIC 2. Configure 50/50 traffic split
+# MAGIC 3. Enable inference logging
+# MAGIC 4. Deploy feedback endpoint (`feedback-endpoint`)
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC ## What This Notebook Still Does
+# MAGIC
+# MAGIC This notebook is now **read-only documentation** showing:
+# MAGIC - How A/B testing works
+# MAGIC - How to verify endpoint status
+# MAGIC - How to test traffic distribution
+# MAGIC - Educational content about Champion/Challenger pattern
 # MAGIC
 # MAGIC **Champion/Challenger Pattern**:
-# MAGIC - **Champion**: Current production model (e.g., Keras) - gets majority traffic (50%)
-# MAGIC - **Challenger**: New model being tested (e.g., PyTorch) - gets minority traffic (50%)
+# MAGIC - **Champion**: Current production model (e.g., Keras) - gets 50% traffic
+# MAGIC - **Challenger**: New model being tested (e.g., PyTorch) - gets 50% traffic
 # MAGIC - Monitor performance → Promote winner → Gradually shift traffic
 # MAGIC
 # MAGIC **What This Enables**:
@@ -16,14 +46,9 @@
 # MAGIC 3. Make data-driven promotion decisions
 # MAGIC 4. Zero-downtime model updates
 # MAGIC
-# MAGIC **Educational Value**:
-# MAGIC - Real-world MLOps pattern
-# MAGIC - A/B testing methodology
-# MAGIC - Gradual rollout strategy
-# MAGIC
 # MAGIC **Prerequisites**:
-# MAGIC - Both models registered in MLflow Model Registry
-# MAGIC - Feedback infrastructure tables created (Issue #12)
+# MAGIC - Both models registered in MLflow Model Registry (train notebooks)
+# MAGIC - Endpoint deployed via Terraform (not this notebook!)
 
 # COMMAND ----------
 # MAGIC %md
@@ -111,104 +136,78 @@ print("\n✅ Both models exist and ready for deployment!")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 3: Create or Update A/B Testing Endpoint
+# MAGIC ## Step 3: ~~Create or Update A/B Testing Endpoint~~ DEPRECATED
+# MAGIC
+# MAGIC **This step is now handled by Terraform!**
+# MAGIC
+# MAGIC ### Old Approach (Deprecated):
+# MAGIC - Notebook deployed endpoint via Databricks REST API
+# MAGIC - Mixed ML work (notebooks) with infrastructure (endpoints)
+# MAGIC - Violates infrastructure-as-code principles
+# MAGIC
+# MAGIC ### New Approach (Current):
+# MAGIC ```bash
+# MAGIC # Terraform manages endpoint deployment
+# MAGIC terraform apply
+# MAGIC ```
+# MAGIC
+# MAGIC ### Terraform Configuration (terraform/databricks/endpoints.tf):
+# MAGIC ```hcl
+# MAGIC resource "databricks_model_serving" "pneumonia_ab_test" {
+# MAGIC   name = "pneumonia-classifier-ab-test"
+# MAGIC
+# MAGIC   config {
+# MAGIC     served_entities {
+# MAGIC       entity_name    = "healthcare_catalog_dev.models.pneumonia_poc_classifier"
+# MAGIC       entity_version = "1"
+# MAGIC       workload_size  = "Small"
+# MAGIC       scale_to_zero_enabled = true
+# MAGIC     }
+# MAGIC
+# MAGIC     served_entities {
+# MAGIC       entity_name    = "healthcare_catalog_dev.models.pneumonia_poc_classifier_pytorch"
+# MAGIC       entity_version = "1"
+# MAGIC       workload_size  = "Small"
+# MAGIC       scale_to_zero_enabled = true
+# MAGIC     }
+# MAGIC
+# MAGIC     traffic_config {
+# MAGIC       routes {
+# MAGIC         served_model_name   = "pneumonia_poc_classifier-1"
+# MAGIC         traffic_percentage  = 50
+# MAGIC       }
+# MAGIC       routes {
+# MAGIC         served_model_name   = "pneumonia_poc_classifier_pytorch-1"
+# MAGIC         traffic_percentage  = 50
+# MAGIC       }
+# MAGIC     }
+# MAGIC
+# MAGIC     auto_capture_config {
+# MAGIC       catalog_name      = "healthcare_catalog_dev"
+# MAGIC       schema_name       = "gold"
+# MAGIC       table_name_prefix = "pneumonia_classifier"
+# MAGIC       enabled           = true
+# MAGIC     }
+# MAGIC   }
+# MAGIC }
+# MAGIC ```
+# MAGIC
+# MAGIC **Benefits**:
+# MAGIC - ✅ Infrastructure as code (versioned, reviewable)
+# MAGIC - ✅ Separation of concerns (ML vs Infrastructure)
+# MAGIC - ✅ Reproducible deployments
+# MAGIC - ✅ No manual API calls in notebooks
 
 # COMMAND ----------
-# Check if endpoint already exists
-endpoint_list_url = f"https://{workspace_url}/api/2.0/serving-endpoints"
-
-response = requests.get(
-    endpoint_list_url,
-    headers={"Authorization": f"Bearer {token}"}
-)
-
-existing_endpoints = response.json().get("endpoints", [])
-endpoint_exists = any(ep["name"] == ENDPOINT_NAME for ep in existing_endpoints)
-
-# Endpoint configuration with A/B testing
-endpoint_config = {
-    "name": ENDPOINT_NAME,
-    "config": {
-        "served_entities": [
-            # Champion Model
-            {
-                "entity_name": CHAMPION_MODEL_NAME,
-                "entity_version": CHAMPION_MODEL_VERSION,
-                "workload_size": WORKLOAD_SIZE,
-                "scale_to_zero_enabled": True
-            },
-            # Challenger Model
-            {
-                "entity_name": CHALLENGER_MODEL_NAME,
-                "entity_version": CHALLENGER_MODEL_VERSION,
-                "workload_size": WORKLOAD_SIZE,
-                "scale_to_zero_enabled": True
-            }
-        ],
-        "traffic_config": {
-            "routes": [
-                {
-                    "served_model_name": f"{CHAMPION_MODEL_NAME.split('.')[-1]}-{CHAMPION_MODEL_VERSION}",
-                    "traffic_percentage": CHAMPION_TRAFFIC_PCT
-                },
-                {
-                    "served_model_name": f"{CHALLENGER_MODEL_NAME.split('.')[-1]}-{CHALLENGER_MODEL_VERSION}",
-                    "traffic_percentage": CHALLENGER_TRAFFIC_PCT
-                }
-            ]
-        },
-        # Enable inference table logging (CRITICAL for A/B testing analysis!)
-        "auto_capture_config": {
-            "catalog_name": INFERENCE_LOG_CATALOG,
-            "schema_name": INFERENCE_LOG_SCHEMA,
-            "table_name_prefix": INFERENCE_LOG_TABLE_PREFIX,
-            "enabled": True
-        }
-    }
-}
-
-if endpoint_exists:
-    print(f"⚠️  Endpoint '{ENDPOINT_NAME}' already exists")
-    print(f"Updating configuration with A/B testing setup...\n")
-
-    endpoint_url = f"https://{workspace_url}/api/2.0/serving-endpoints/{ENDPOINT_NAME}/config"
-
-    response = requests.put(
-        endpoint_url,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        },
-        json=endpoint_config["config"]
-    )
-
-    if response.status_code in [200, 201]:
-        print(f"✅ Endpoint configuration updated!")
-        print(f"\nResponse: {json.dumps(response.json(), indent=2)}")
-        print(f"\nEndpoint will be ready in ~5-10 minutes...")
-    else:
-        print(f"❌ Error updating endpoint: {response.status_code}")
-        print(f"Response: {response.text}")
-else:
-    print(f"Creating new A/B testing endpoint: {ENDPOINT_NAME}\n")
-
-    response = requests.post(
-        endpoint_list_url,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        },
-        json=endpoint_config
-    )
-
-    if response.status_code in [200, 201]:
-        print(f"✅ A/B testing endpoint created!")
-        print(f"\nResponse: {json.dumps(response.json(), indent=2)}")
-        print(f"\nEndpoint will be ready in ~5-10 minutes...")
-        print(f"Continue to Step 4 to monitor deployment status.")
-    else:
-        print(f"❌ Error creating endpoint: {response.status_code}")
-        print(f"Response: {response.text}")
+print("⚠️  STEP 3 DEPRECATED")
+print("")
+print("Endpoint deployment is now managed by Terraform.")
+print("Run 'terraform apply' to deploy the A/B testing endpoint.")
+print("")
+print("This notebook now focuses on:")
+print("  - Verifying endpoint status (Step 4)")
+print("  - Testing traffic distribution (Step 5)")
+print("  - Educational content about A/B testing")
 
 # COMMAND ----------
 # MAGIC %md

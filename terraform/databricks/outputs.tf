@@ -80,3 +80,24 @@ output "ingestion_notebook_path" {
   value       = databricks_notebook.kaggle_ingestion.path
   description = "Path to Kaggle ingestion notebook"
 }
+
+# Model Serving Endpoints
+output "ab_test_endpoint_name" {
+  value       = databricks_model_serving.pneumonia_ab_test.name
+  description = "A/B testing endpoint name"
+}
+
+output "ab_test_endpoint_url" {
+  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.pneumonia_ab_test.name}/invocations"
+  description = "A/B testing endpoint invocation URL"
+}
+
+output "feedback_endpoint_name" {
+  value       = databricks_model_serving.feedback_endpoint.name
+  description = "Feedback endpoint name"
+}
+
+output "feedback_endpoint_url" {
+  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.feedback_endpoint.name}/invocations"
+  description = "Feedback endpoint invocation URL"
+}
