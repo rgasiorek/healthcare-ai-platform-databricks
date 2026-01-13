@@ -79,5 +79,5 @@ resource "databricks_model_serving" "feedback_endpoint" {
   }
 
   # Dependencies: FeedbackProcessor model must be registered first
-  # Run deploy_feedback_endpoint.py notebook before applying this
+  # Run deploy_feedback_endpoint.py notebook to register model before terraform apply
 }
