@@ -64,5 +64,12 @@ resource "databricks_notebook" "deploy_feedback_endpoint" {
   source   = "${path.module}/../../notebooks/04_feedback/deploy_feedback_endpoint.py"
 }
 
+# End-to-End Demo (30-minute workflow)
+resource "databricks_notebook" "end_to_end_demo" {
+  path     = "/Shared/end-to-end-demo"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/05_demo/end_to_end_demo.py"
+}
+
 # Outputs
 
