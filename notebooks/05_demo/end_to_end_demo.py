@@ -68,20 +68,24 @@ from PIL import Image
 def preprocess_image(file_path, size=64):
     """Load and preprocess image for model input"""
     from io import BytesIO
+    import tempfile
+    import os
 
-    # Remove dbfs: prefix and use /dbfs/ for local file system access
+    # Unity Catalog External Volumes require using Spark to read files
+    # Cannot use direct /dbfs/ file system access for External Volumes
+
+    # Convert path format if needed
     if file_path.startswith("dbfs:"):
-        local_path = file_path.replace("dbfs:", "/dbfs")
+        volume_path = file_path.replace("dbfs:", "")
     else:
-        local_path = "/dbfs" + file_path if not file_path.startswith("/dbfs") else file_path
+        volume_path = file_path
 
-    # Unity Catalog Volumes are mounted at /Volumes, accessible via /dbfs/Volumes
-    # Read binary file content
-    with open(local_path, 'rb') as f:
-        img_bytes = f.read()
+    # Read file using Spark binaryFiles (works with Unity Catalog Volumes)
+    binary_df = spark.read.format("binaryFile").load(volume_path)
+    file_content = binary_df.select("content").collect()[0][0]
 
     # Load image from bytes
-    img = Image.open(BytesIO(img_bytes))
+    img = Image.open(BytesIO(file_content))
     img = img.convert('RGB')
     img = img.resize((size, size))
     img_array = np.array(img) / 255.0
