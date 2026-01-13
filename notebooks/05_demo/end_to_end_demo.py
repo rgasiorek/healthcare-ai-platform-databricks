@@ -67,8 +67,21 @@ from PIL import Image
 
 def preprocess_image(file_path, size=64):
     """Load and preprocess image for model input"""
-    local_path = file_path.replace("dbfs:", "/dbfs")
-    img = Image.open(local_path)
+    from io import BytesIO
+
+    # Remove dbfs: prefix and use /dbfs/ for local file system access
+    if file_path.startswith("dbfs:"):
+        local_path = file_path.replace("dbfs:", "/dbfs")
+    else:
+        local_path = "/dbfs" + file_path if not file_path.startswith("/dbfs") else file_path
+
+    # Unity Catalog Volumes are mounted at /Volumes, accessible via /dbfs/Volumes
+    # Read binary file content
+    with open(local_path, 'rb') as f:
+        img_bytes = f.read()
+
+    # Load image from bytes
+    img = Image.open(BytesIO(img_bytes))
     img = img.convert('RGB')
     img = img.resize((size, size))
     img_array = np.array(img) / 255.0
