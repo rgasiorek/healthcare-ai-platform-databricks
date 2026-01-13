@@ -107,24 +107,27 @@ for img in test_images:
             invocation_url,
             headers={"Authorization": f"Bearer {token}"},
             json=payload,
-            timeout=30
+            timeout=90  # Increased timeout for cold start (first request can take 60s)
         )
 
         if response.status_code == 200:
             result = response.json()
-            pred_prob = result['predictions'][0][0]
+            pred_prob = float(result['predictions'][0][0])  # Ensure it's a Python float
             predicted_label = 1 if pred_prob > 0.5 else 0
 
             # Generate prediction_id
             prediction_id = f"pred-{uuid.uuid4().hex[:12]}"
+
+            # Calculate confidence (distance from 0.5 threshold)
+            confidence_score = pred_prob if pred_prob > 0.5 else (1 - pred_prob)
 
             # Prepare record for our Terraform table
             prediction_record = {
                 'prediction_id': prediction_id,
                 'image_id': img.image_id,
                 'predicted_label': predicted_label,
-                'prediction_probability': float(pred_prob),
-                'confidence_score': float(max(pred_prob, 1 - pred_prob)),
+                'prediction_probability': pred_prob,
+                'confidence_score': confidence_score,
                 'true_label': 1 if img.category == 'PNEUMONIA' else 0,  # We know true label from bronze
                 'is_correct': (predicted_label == (1 if img.category == 'PNEUMONIA' else 0)),
                 'model_name': ENDPOINT_NAME,  # A/B endpoint name
