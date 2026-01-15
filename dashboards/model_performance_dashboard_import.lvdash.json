@@ -26,7 +26,7 @@
               }
             ],
             "spec": {
-              "version": "v2",
+              "version": 1,
               "widgetType": "table"
             }
           }
@@ -49,7 +49,7 @@
               }
             ],
             "spec": {
-              "version": "v2",
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -82,7 +82,7 @@
               }
             ],
             "spec": {
-              "version": "v2",
+              "version": 3,
               "widgetType": "line",
               "encodings": {
                 "x": {
