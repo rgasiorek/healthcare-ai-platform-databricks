@@ -66,7 +66,7 @@ print("  - Security: endpoint shut down when not in use")
 print("  Waiting for cold start...")
 
 # Send a dummy request to wake up the endpoint
-dummy_data = np.random.rand(64, 64, 3).tolist()
+dummy_data = np.random.rand(64, 64, 3).astype(np.float32).tolist()
 warmup_payload = {"inputs": [dummy_data]}
 
 try:
@@ -143,7 +143,8 @@ for img in test_images:
     img_array = preprocess_image(img.file_path)
 
     # Call A/B endpoint
-    payload = {"inputs": [img_array.tolist()]}
+    # Convert to float32 for PyTorch compatibility
+    payload = {"inputs": [img_array.astype(np.float32).tolist()]}
 
     # Use longer timeout for first request (cold start), shorter for subsequent
     timeout = 180 if first_request else 60
