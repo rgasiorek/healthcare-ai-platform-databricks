@@ -153,7 +153,7 @@ AWS Account (905418100642)
 | **Volume** | `xray_images` | External volume for JPEG files |
 | **Compute Cluster** | `healthcare-data-cluster-dev` | Python/ML workloads (2x i3.xlarge) |
 | **SQL Warehouse** | Serverless warehouse | SQL queries and BI dashboards |
-| **Notebooks** | 9 notebooks | Ingestion, training, deployment, monitoring, demo |
+| **Notebooks** | 11 notebooks | Ingestion, training, deployment, feedback, demos |
 | **Jobs** | 2 Databricks Jobs | Model deployment automation |
 
 ### File Structure
@@ -368,9 +368,61 @@ To deploy to different environment: Update `variables.tf` → `environment = "pi
 | Component | Purpose |
 |-----------|---------|
 | `prediction_feedback` table | Ground truth labels from radiologists |
-| `model_performance_live` view | Real-time accuracy calculation |
-| `feedback_collector.py` | BentoML-style feedback API |
-| `monitor_ab_test.py` | Champion vs Challenger comparison dashboard |
+| `pneumonia_predictions` table | AI predictions with confidence scores |
+| **Streamlit App** (`apps/feedback_review/app.py`) | Interactive table-based feedback review interface |
+| **SQL Dashboard** (`dashboards/model_comparison_dashboard.sql`) | Real-time model comparison with ML metrics |
+
+## Notebooks
+
+| Notebook | Purpose | Location |
+|----------|---------|----------|
+| `hello_world` | Test notebook for Terraform deployment | `/notebooks/00_utils/` |
+| `ingest_kaggle_xray_data` | Download and ingest X-ray dataset from Kaggle | `/notebooks/01_ingestion/` |
+| `train_poc_model` | Train TensorFlow/Keras CNN model | `/notebooks/03_ml/` |
+| `train_poc_model_pytorch` | Train PyTorch CNN model | `/notebooks/03_ml/` |
+| `deploy_serving_endpoint` | Deploy single model serving endpoint | `/notebooks/03_ml/` |
+| `deploy_ab_testing_endpoint` | Deploy A/B testing endpoint (Keras vs PyTorch) | `/notebooks/03_ml/` |
+| `demo_model_usage` | Demo SDK vs REST API for model inference | `/notebooks/03_ml/` |
+| `interactive_feedback_review` | Interactive feedback submission (Databricks widgets) | `/notebooks/04_feedback/` |
+| `deploy_feedback_endpoint` | Deploy feedback collection REST endpoint | `/notebooks/04_feedback/` |
+| `end_to_end_demo` | Complete 30-minute MLOps workflow demo | `/notebooks/05_demo/` |
+| `generate_sample_predictions` | Generate test predictions via A/B endpoint | `/notebooks/05_demo/` |
+
+## Feedback & Monitoring
+
+### Streamlit Feedback Review App
+
+Interactive table-based interface for radiologists to review AI predictions:
+
+```bash
+cd apps/feedback_review
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**Features**:
+- Editable table interface with dropdown selectors
+- Real-time validation
+- Direct writes to `gold.prediction_feedback` table
+- Automatic feedback type calculation (TP/FP/TN/FN)
+
+**Configuration**: Set up Databricks connection in `.streamlit/secrets.toml` (see `secrets.toml.example`)
+
+### Model Comparison Dashboard
+
+SQL-based dashboard for real-time model performance monitoring:
+
+**Location**: `/dashboards/model_comparison_dashboard.sql`
+
+**Metrics Displayed**:
+- Precision, Recall, F1 Score, Accuracy (per model)
+- Confusion matrix (TP, FP, TN, FN)
+- Performance trends over time
+- Confidence analysis (correct vs incorrect predictions)
+- Error analysis (false positives vs false negatives)
+- Radiologist feedback summary
+
+**How to Create**: See `/dashboards/README.md` for step-by-step instructions
 
 ## Project Tracking
 
@@ -394,6 +446,10 @@ All work tracked via GitHub Issues:
 - ✅ [Issue #13](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/13): Build BentoML-style feedback collector API
 - ✅ [Issue #14](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/14): Create monitoring dashboard for model comparison
 - ✅ [Issue #15](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/15): Update demo notebook with prediction tracking
+- ✅ [Issue #16](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/16): Clean up end-to-end demo notebook
+- ✅ [Issue #17](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/17): Create model comparison dashboard with ML metrics
+- ✅ [Issue #18](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/18): Remove unused notebooks
+- ✅ [Issue #19](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/19): Update README files to reflect simplifications
 
 ## Exploring the Platform
 
