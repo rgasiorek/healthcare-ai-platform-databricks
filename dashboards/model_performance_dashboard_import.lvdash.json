@@ -1,6 +1,6 @@
 {
   "displayName": "Model Performance Comparison",
-  "warehouse_id": "YOUR_WAREHOUSE_ID",
+  "warehouse_id": "a823ad30eae0e044",
   "datasets": [],
   "pages": [
     {
@@ -19,14 +19,14 @@
             "textbox_spec": null,
             "queries": [
               {
-                "name": "main_query",
+                "name": "ml_metrics",
                 "query": {
-                  "query_text": "SELECT\n  p.model_name,\n  p.model_version,\n  COUNT(DISTINCT f.feedback_id) as total_feedback,\n  SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) as TP,\n  SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END) as FP,\n  SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END) as TN,\n  SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END) as FN,\n  ROUND(\n    SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 /\n    NULLIF(\n      SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) +\n      SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END),\n      0\n    ),\n    4\n  ) as precision,\n  ROUND(\n    SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 /\n    NULLIF(\n      SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) +\n      SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END),\n      0\n    ),\n    4\n  ) as recall,\n  ROUND(\n    (SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) +\n     SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END)) * 1.0 /\n    NULLIF(COUNT(DISTINCT f.feedback_id), 0),\n    4\n  ) as accuracy\nFROM healthcare_catalog_dev.gold.pneumonia_predictions p\nINNER JOIN healthcare_catalog_dev.gold.prediction_feedback f\n  ON p.prediction_id = f.prediction_id\nGROUP BY p.model_name, p.model_version\nORDER BY accuracy DESC"
+                  "query": "SELECT p.model_name, p.model_version, COUNT(DISTINCT f.feedback_id) as total_feedback, SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) as TP, SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END) as FP, SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END) as TN, SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END) as FN, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END), 0), 4) as precision, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END), 0), 4) as recall, ROUND((SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END)) * 1.0 / NULLIF(COUNT(DISTINCT f.feedback_id), 0), 4) as accuracy FROM healthcare_catalog_dev.gold.pneumonia_predictions p INNER JOIN healthcare_catalog_dev.gold.prediction_feedback f ON p.prediction_id = f.prediction_id GROUP BY p.model_name, p.model_version ORDER BY accuracy DESC"
                 }
               }
             ],
             "spec": {
-              "version": "v3",
+              "version": "v2",
               "widgetType": "table"
             }
           }
@@ -42,14 +42,14 @@
             "name": "confusion_matrix",
             "queries": [
               {
-                "name": "main_query",
+                "name": "confusion",
                 "query": {
-                  "query_text": "SELECT\n  f.feedback_type as feedback_type,\n  COUNT(*) as count\nFROM healthcare_catalog_dev.gold.prediction_feedback f\nGROUP BY f.feedback_type\nORDER BY\n  CASE f.feedback_type\n    WHEN 'true-positive' THEN 1\n    WHEN 'false-positive' THEN 2\n    WHEN 'false-negative' THEN 3\n    WHEN 'true-negative' THEN 4\n    ELSE 5\n  END"
+                  "query": "SELECT f.feedback_type, COUNT(*) as count FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY f.feedback_type ORDER BY CASE f.feedback_type WHEN 'true-positive' THEN 1 WHEN 'false-positive' THEN 2 WHEN 'false-negative' THEN 3 WHEN 'true-negative' THEN 4 ELSE 5 END"
                 }
               }
             ],
             "spec": {
-              "version": "v3",
+              "version": "v2",
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -75,34 +75,24 @@
             "name": "performance_trends",
             "queries": [
               {
-                "name": "main_query",
+                "name": "trends",
                 "query": {
-                  "query_text": "SELECT\n  DATE_TRUNC('day', f.timestamp) as date,\n  ROUND(\n    (SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*),\n    2\n  ) as accuracy_pct,\n  ROUND(\n    SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 /\n    NULLIF(\n      SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) +\n      SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END),\n      0\n    ) * 100,\n    2\n  ) as precision_pct,\n  ROUND(\n    SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 /\n    NULLIF(\n      SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) +\n      SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END),\n      0\n    ) * 100,\n    2\n  ) as recall_pct\nFROM healthcare_catalog_dev.gold.prediction_feedback f\nGROUP BY DATE_TRUNC('day', f.timestamp)\nORDER BY date DESC"
+                  "query": "SELECT DATE_TRUNC('day', f.timestamp) as date, ROUND((SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*), 2) as accuracy_pct FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY DATE_TRUNC('day', f.timestamp) ORDER BY date DESC"
                 }
               }
             ],
             "spec": {
-              "version": "v3",
+              "version": "v2",
               "widgetType": "line",
               "encodings": {
                 "x": {
                   "fieldName": "date",
                   "displayName": "Date"
                 },
-                "y": [
-                  {
-                    "fieldName": "accuracy_pct",
-                    "displayName": "Accuracy %"
-                  },
-                  {
-                    "fieldName": "precision_pct",
-                    "displayName": "Precision %"
-                  },
-                  {
-                    "fieldName": "recall_pct",
-                    "displayName": "Recall %"
-                  }
-                ]
+                "y": {
+                  "fieldName": "accuracy_pct",
+                  "displayName": "Accuracy %"
+                }
               }
             }
           }
