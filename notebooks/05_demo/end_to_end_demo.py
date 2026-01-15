@@ -3,9 +3,10 @@
 # MAGIC # End-to-End MLOps Demo (30 Minutes)
 # MAGIC
 # MAGIC Complete workflow using Terraform-defined tables:
-# MAGIC 1. Make predictions via A/B endpoint
-# MAGIC 2. Submit radiologist feedback
-# MAGIC 3. Monitor Champion vs Challenger performance
+# MAGIC 1. Warm up endpoint (cold start: 2-3 min)
+# MAGIC 2. Make predictions via A/B endpoint
+# MAGIC 3. Submit radiologist feedback
+# MAGIC 4. Monitor Champion vs Challenger performance
 # MAGIC
 # MAGIC **Tables Used** (from Terraform):
 # MAGIC - `gold.pneumonia_predictions` (predictions from models)
@@ -47,7 +48,46 @@ print(f"  Feedback Table: {FEEDBACK_TABLE}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 1: Make Predictions (5-10 predictions)
+# MAGIC ## Step 1: Warm Up Endpoint (First Request)
+# MAGIC
+# MAGIC **Why warm-up is needed:**
+# MAGIC - Endpoint configured with `scale_to_zero_enabled = true` in Terraform
+# MAGIC - **Cost savings**: Endpoint automatically shuts down when idle (no compute charges)
+# MAGIC - **Security**: Inactive endpoints are not running (reduced attack surface)
+# MAGIC - **Trade-off**: First request takes 2-3 minutes to start up (cold start)
+# MAGIC
+# MAGIC Once warm, subsequent requests complete in seconds.
+
+# COMMAND ----------
+print("Warming up endpoint (this may take 2-3 minutes)...")
+print("  Endpoint configured with scale_to_zero_enabled = true")
+print("  - Cost savings: no charges when idle")
+print("  - Security: endpoint shut down when not in use")
+print("  Waiting for cold start...")
+
+# Send a dummy request to wake up the endpoint
+dummy_data = np.random.rand(64, 64, 3).tolist()
+warmup_payload = {"inputs": [dummy_data]}
+
+try:
+    warmup_response = requests.post(
+        invocation_url,
+        headers={"Authorization": f"Bearer {token}"},
+        json=warmup_payload,
+        timeout=300  # 5 minutes for cold start
+    )
+    if warmup_response.status_code == 200:
+        print("Endpoint is warm and ready!")
+    else:
+        print(f"Warm-up returned status {warmup_response.status_code}")
+        print(f"  Response: {warmup_response.text}")
+except Exception as e:
+    print(f"Warm-up failed: {e}")
+    print("  The endpoint may still be starting up. Try running the next cells in a few minutes.")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 2: Make Predictions (5-10 predictions)
 
 # COMMAND ----------
 # Load test images from bronze
@@ -95,6 +135,9 @@ def preprocess_image(file_path, size=64):
 # Make predictions and write to gold.pneumonia_predictions
 predictions = []
 
+# First request may take up to 3 minutes for cold start
+first_request = True
+
 for img in test_images:
     # Preprocess image
     img_array = preprocess_image(img.file_path)
@@ -102,13 +145,18 @@ for img in test_images:
     # Call A/B endpoint
     payload = {"inputs": [img_array.tolist()]}
 
+    # Use longer timeout for first request (cold start), shorter for subsequent
+    timeout = 180 if first_request else 60
+
     try:
         response = requests.post(
             invocation_url,
             headers={"Authorization": f"Bearer {token}"},
             json=payload,
-            timeout=90  # Increased timeout for cold start (first request can take 60s)
+            timeout=timeout
         )
+
+        first_request = False  # After first successful request, reduce timeout
 
         if response.status_code == 200:
             result = response.json()
@@ -138,31 +186,48 @@ for img in test_images:
 
             predictions.append(prediction_record)
 
-            match = "✅" if prediction_record['is_correct'] else "❌"
+            match = "[MATCH]" if prediction_record['is_correct'] else "[DIFF]"
             print(f"{match} {img.filename}")
-            print(f"   True: {img.category} | Predicted: {'PNEUMONIA' if predicted_label == 1 else 'NORMAL'}")
-            print(f"   Probability: {pred_prob:.3f} | ID: {prediction_id}")
+            print(f"  True: {img.category} | Predicted: {'PNEUMONIA' if predicted_label == 1 else 'NORMAL'}")
+            print(f"  Probability: {pred_prob:.3f} | ID: {prediction_id}")
             print()
 
     except Exception as e:
-        print(f"❌ Error predicting {img.filename}: {e}")
+        print(f"Error predicting {img.filename}: {e}")
 
-print(f"\n✅ Made {len(predictions)} predictions")
+print(f"\nMade {len(predictions)} predictions")
 
 # COMMAND ----------
 # Write predictions to gold.pneumonia_predictions (Terraform table)
 if predictions:
-    pred_df = spark.createDataFrame(predictions)
+    # Define schema to match Terraform table exactly
+    from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, BooleanType, TimestampType, DateType
+
+    schema = StructType([
+        StructField("prediction_id", StringType(), True),
+        StructField("image_id", StringType(), True),
+        StructField("predicted_label", IntegerType(), True),
+        StructField("prediction_probability", DoubleType(), True),
+        StructField("confidence_score", DoubleType(), True),
+        StructField("true_label", IntegerType(), True),
+        StructField("is_correct", BooleanType(), True),
+        StructField("model_name", StringType(), True),
+        StructField("model_version", StringType(), True),
+        StructField("predicted_at", TimestampType(), True),
+        StructField("prediction_date", DateType(), True)
+    ])
+
+    pred_df = spark.createDataFrame(predictions, schema=schema)
 
     pred_df.write.mode('append').saveAsTable(PREDICTIONS_TABLE)
 
-    print(f"✅ Wrote {len(predictions)} predictions to {PREDICTIONS_TABLE}")
+    print(f"Wrote {len(predictions)} predictions to {PREDICTIONS_TABLE}")
 else:
-    print("⚠️  No predictions to write")
+    print("No predictions to write")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 2: Verify Predictions in Table
+# MAGIC ## Step 3: Verify Predictions in Table
 
 # COMMAND ----------
 # Query our Terraform table
@@ -181,15 +246,28 @@ recent_predictions = spark.sql(f"""
     LIMIT 20
 """)
 
-print(f"\n📊 Recent Predictions from {PREDICTIONS_TABLE}:")
+print(f"\nRecent Predictions from {PREDICTIONS_TABLE}:")
 print("=" * 120)
 recent_predictions.show(truncate=False)
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 3: Submit Radiologist Feedback
+# MAGIC ## Step 4: Submit Radiologist Feedback
 # MAGIC
-# MAGIC Simulate radiologist reviewing predictions and providing ground truth
+# MAGIC **Use the Streamlit App for interactive feedback submission:**
+# MAGIC
+# MAGIC ```bash
+# MAGIC cd /path/to/apps/feedback_review
+# MAGIC streamlit run app.py
+# MAGIC ```
+# MAGIC
+# MAGIC The Streamlit app provides:
+# MAGIC - Editable table interface
+# MAGIC - Dropdown selectors for diagnosis and confidence
+# MAGIC - Real-time validation
+# MAGIC - Auto-save to database
+# MAGIC
+# MAGIC **Or use the automated batch feedback below for quick testing:**
 
 # COMMAND ----------
 # Get predictions that don't have feedback yet
@@ -212,7 +290,8 @@ print(f"Found {len(pending_feedback)} predictions awaiting feedback")
 print("-" * 80)
 
 # COMMAND ----------
-# Submit feedback for each prediction
+# Automated batch feedback for demo
+# In production, use the Streamlit app for interactive review
 feedback_records = []
 
 for pred in pending_feedback:
@@ -247,13 +326,13 @@ for pred in pending_feedback:
 
     feedback_records.append(feedback_record)
 
-    icon = "✅" if feedback_type.startswith('true') else "❌"
+    icon = "[OK]" if feedback_type.startswith('true') else "[ERR]"
     print(f"{icon} {pred.prediction_id[:16]}...")
-    print(f"   AI: {ai_said} | Radiologist: {ground_truth}")
-    print(f"   Type: {feedback_type}")
+    print(f"  AI: {ai_said} | Radiologist: {ground_truth}")
+    print(f"  Type: {feedback_type}")
     print()
 
-print(f"\n✅ Collected {len(feedback_records)} feedback submissions")
+print(f"\nCollected {len(feedback_records)} feedback submissions")
 
 # COMMAND ----------
 # Write feedback to gold.prediction_feedback (Terraform table)
@@ -262,13 +341,16 @@ if feedback_records:
 
     feedback_df.write.mode('append').saveAsTable(FEEDBACK_TABLE)
 
-    print(f"✅ Wrote {len(feedback_records)} feedback records to {FEEDBACK_TABLE}")
+    print(f"Wrote {len(feedback_records)} feedback records to {FEEDBACK_TABLE}")
 else:
-    print("⚠️  No feedback to write")
+    print("No feedback to write")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 4: Monitor Performance - Champion vs Challenger
+# MAGIC ## Step 5: Compare Performance
+# MAGIC
+# MAGIC Basic performance analysis shown below. For real-time monitoring and detailed model comparison,
+# MAGIC see the **Databricks Dashboard** with ML metrics (precision, recall, F1) and confusion matrix.
 
 # COMMAND ----------
 # Calculate accuracy by model
@@ -288,7 +370,7 @@ performance = spark.sql(f"""
     GROUP BY model_name
 """)
 
-print("\n📊 MODEL PERFORMANCE:")
+print("\nMODEL PERFORMANCE:")
 print("=" * 80)
 performance.show(truncate=False)
 
@@ -303,7 +385,7 @@ confusion = spark.sql(f"""
     ORDER BY f.feedback_type
 """)
 
-print("\n📊 CONFUSION MATRIX (From Feedback):")
+print("\nCONFUSION MATRIX (From Feedback):")
 print("=" * 80)
 confusion.show(truncate=False)
 
@@ -323,7 +405,7 @@ feedback_analysis = spark.sql(f"""
     ORDER BY f.timestamp DESC
 """)
 
-print("\n📊 FEEDBACK ANALYSIS:")
+print("\nFEEDBACK ANALYSIS:")
 print("=" * 80)
 feedback_analysis.show(truncate=False)
 
@@ -331,19 +413,22 @@ feedback_analysis.show(truncate=False)
 # MAGIC %md
 # MAGIC ## Summary
 # MAGIC
-# MAGIC ✅ **Complete MLOps Workflow Demonstrated**:
+# MAGIC **Complete MLOps Workflow Demonstrated**:
 # MAGIC
-# MAGIC 1. ✅ Predictions made via A/B testing endpoint
-# MAGIC 2. ✅ Data written to `gold.pneumonia_predictions` (Terraform table)
-# MAGIC 3. ✅ Feedback collected (simulated radiologist review)
-# MAGIC 4. ✅ Data written to `gold.prediction_feedback` (Terraform table)
-# MAGIC 5. ✅ Performance monitored (accuracy, confusion matrix)
+# MAGIC 1. Endpoint warmed up (scale-from-zero handling)
+# MAGIC 2. Predictions made via A/B testing endpoint
+# MAGIC 3. Data written to `gold.pneumonia_predictions` (Terraform table)
+# MAGIC 4. Feedback collected (simulated radiologist review)
+# MAGIC 5. Data written to `gold.prediction_feedback` (Terraform table)
+# MAGIC 6. Performance monitored (accuracy, confusion matrix)
 # MAGIC
 # MAGIC **Tables Used** (All Terraform-defined):
 # MAGIC - `healthcare_catalog_dev.gold.pneumonia_predictions`
 # MAGIC - `healthcare_catalog_dev.gold.prediction_feedback`
 # MAGIC
+# MAGIC **Real-Time Monitoring**:
+# MAGIC - Use the **Databricks Dashboard** for detailed model comparison with ML metrics
+# MAGIC
 # MAGIC **Next Steps**:
 # MAGIC - To see true A/B testing (Keras vs PyTorch), we need to capture `served_model_name` from endpoint
 # MAGIC - For production, integrate feedback endpoint (REST API for radiologists)
-# MAGIC - Build BI dashboard using these tables

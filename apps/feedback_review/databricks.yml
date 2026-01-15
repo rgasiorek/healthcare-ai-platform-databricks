@@ -1,0 +1,26 @@
+# Databricks App Configuration
+# This file defines how the Streamlit app should be deployed
+
+resources:
+  apps:
+    radiologist_feedback_review:
+      name: radiologist-feedback-review
+      description: "Interactive table for reviewing AI predictions and submitting radiologist feedback"
+
+      resources:
+        - name: main-job
+          description: "Streamlit app server"
+          tasks:
+            - task_key: streamlit_app
+              python_wheel_task:
+                package_name: "streamlit"
+                entry_point: "run"
+                parameters:
+                  - "app.py"
+                  - "--server.port=8080"
+                  - "--server.address=0.0.0.0"
+              libraries:
+                - pypi:
+                    package: "streamlit>=1.28.0"
+                - pypi:
+                    package: "pandas>=2.0.0"

@@ -71,5 +71,12 @@ resource "databricks_notebook" "end_to_end_demo" {
   source   = "${path.module}/../../notebooks/05_demo/end_to_end_demo.py"
 }
 
+# Generate Sample Predictions (Quick Test Data)
+resource "databricks_notebook" "generate_sample_predictions" {
+  path     = "/Shared/generate-sample-predictions"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/05_demo/generate_sample_predictions.py"
+}
+
 # Outputs
 
