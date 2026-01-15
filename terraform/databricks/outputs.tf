@@ -92,12 +92,15 @@ output "ab_test_endpoint_url" {
   description = "A/B testing endpoint invocation URL"
 }
 
-output "feedback_endpoint_name" {
-  value       = databricks_model_serving.feedback_endpoint.name
-  description = "Feedback endpoint name"
-}
-
-output "feedback_endpoint_url" {
-  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.feedback_endpoint.name}/invocations"
-  description = "Feedback endpoint invocation URL"
-}
+# Feedback endpoint outputs (disabled - endpoint not deployed)
+# Uncomment after running deploy_feedback_endpoint.py notebook
+#
+# output "feedback_endpoint_name" {
+#   value       = databricks_model_serving.feedback_endpoint.name
+#   description = "Feedback endpoint name"
+# }
+#
+# output "feedback_endpoint_url" {
+#   value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.feedback_endpoint.name}/invocations"
+#   description = "Feedback endpoint invocation URL"
+# }

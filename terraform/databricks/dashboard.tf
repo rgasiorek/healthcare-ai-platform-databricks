@@ -1,6 +1,9 @@
 # Lakeview/AI/BI Dashboard - Model Performance Monitoring
 # Uses new databricks_dashboard resource (recommended by Databricks as of April 2025)
 
+# Data source for current user
+data "databricks_current_user" "me" {}
+
 resource "databricks_dashboard" "model_performance" {
   display_name = "Model Performance Comparison"
   warehouse_id = databricks_sql_endpoint.healthcare_warehouse.id
