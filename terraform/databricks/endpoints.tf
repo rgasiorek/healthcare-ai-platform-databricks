@@ -57,27 +57,30 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
 }
 
 # Feedback Endpoint (Production-Ready Feedback Collection)
-resource "databricks_model_serving" "feedback_endpoint" {
-  name = "feedback-endpoint"
-
-  config {
-    served_entities {
-      entity_name    = "healthcare_catalog_${var.environment}.models.feedback_processor"
-      entity_version = "1"
-      workload_size  = "Small"
-      scale_to_zero_enabled = true
-    }
-
-    # No traffic config needed (single model)
-    # No inference logging needed (this endpoint processes feedback, not predictions)
-  }
-
-  lifecycle {
-    ignore_changes = [
-      config[0].served_entities[0].entity_version
-    ]
-  }
-
-  # Dependencies: FeedbackProcessor model must be registered first
-  # Run deploy_feedback_endpoint.py notebook to register model before terraform apply
-}
+# DISABLED: Model not deployed yet, feedback handled via Streamlit app
+# Uncomment and apply after running deploy_feedback_endpoint.py notebook
+#
+# resource "databricks_model_serving" "feedback_endpoint" {
+#   name = "feedback-endpoint"
+#
+#   config {
+#     served_entities {
+#       entity_name    = "healthcare_catalog_${var.environment}.models.feedback_processor"
+#       entity_version = "1"
+#       workload_size  = "Small"
+#       scale_to_zero_enabled = true
+#     }
+#
+#     # No traffic config needed (single model)
+#     # No inference logging needed (this endpoint processes feedback, not predictions)
+#   }
+#
+#   lifecycle {
+#     ignore_changes = [
+#       config[0].served_entities[0].entity_version
+#     ]
+#   }
+#
+#   # Dependencies: FeedbackProcessor model must be registered first
+#   # Run deploy_feedback_endpoint.py notebook to register model before terraform apply
+# }
