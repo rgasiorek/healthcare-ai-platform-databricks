@@ -108,6 +108,12 @@ resource "databricks_sql_visualization" "ml_metrics_table" {
   type        = "TABLE"
   name        = "ML Metrics Table"
   description = "Precision, Recall, F1 Score, Accuracy by model"
+
+  options = jsonencode({
+    "version" : 2,
+    "itemsPerPage" : 25,
+    "paginationSize" : "default"
+  })
 }
 
 # Widget 1: Add visualization to dashboard
