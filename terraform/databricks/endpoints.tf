@@ -7,17 +7,19 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
 
   config {
     # Champion Model (Keras/TensorFlow)
+    # Version 2: Path-based model (accepts file paths, not image bytes)
     served_entities {
       entity_name    = "healthcare_catalog_${var.environment}.models.pneumonia_poc_classifier"
-      entity_version = "1"
+      entity_version = "2"  # Path-based version (run deploy_path_based_models.py first)
       workload_size  = "Small"
       scale_to_zero_enabled = true
     }
 
     # Challenger Model (PyTorch)
+    # Version 2: Path-based model (accepts file paths, not image bytes)
     served_entities {
       entity_name    = "healthcare_catalog_${var.environment}.models.pneumonia_poc_classifier_pytorch"
-      entity_version = "1"
+      entity_version = "2"  # Path-based version (run deploy_path_based_models.py first)
       workload_size  = "Small"
       scale_to_zero_enabled = true
     }

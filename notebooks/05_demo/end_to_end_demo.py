@@ -65,9 +65,12 @@ print("  - Cost savings: no charges when idle")
 print("  - Security: endpoint shut down when not in use")
 print("  Waiting for cold start...")
 
-# Send a dummy request to wake up the endpoint
-dummy_data = np.random.rand(64, 64, 3).astype(np.float32).tolist()
-warmup_payload = {"inputs": [dummy_data]}
+# Send a warmup request with a real file path
+# Use first image from bronze as warmup
+warmup_image = spark.sql(f"""
+    SELECT file_path FROM {CATALOG}.{SCHEMA_BRONZE}.kaggle_xray_metadata LIMIT 1
+""").collect()[0].file_path
+warmup_payload = {"dataframe_records": [{"file_path": warmup_image}]}
 
 try:
     warmup_response = requests.post(
@@ -88,6 +91,11 @@ except Exception as e:
 # COMMAND ----------
 # MAGIC %md
 # MAGIC ## Step 2: Make Predictions (5-10 predictions)
+# MAGIC
+# MAGIC **Path-Based Approach**: Send file paths to endpoint (not image bytes)
+# MAGIC - More efficient: no network overhead sending image data
+# MAGIC - Models handle preprocessing: no type conversion issues
+# MAGIC - Better separation: each model controls its own preprocessing
 
 # COMMAND ----------
 # Load test images from bronze
@@ -101,50 +109,19 @@ print(f"Loaded {len(test_images)} test images")
 print("-" * 80)
 
 # COMMAND ----------
-# Helper: Preprocess image
-import numpy as np
-from PIL import Image
-
-def preprocess_image(file_path, size=64):
-    """Load and preprocess image for model input"""
-    from io import BytesIO
-    import tempfile
-    import os
-
-    # Unity Catalog External Volumes require using Spark to read files
-    # Cannot use direct /dbfs/ file system access for External Volumes
-
-    # Convert path format if needed
-    if file_path.startswith("dbfs:"):
-        volume_path = file_path.replace("dbfs:", "")
-    else:
-        volume_path = file_path
-
-    # Read file using Spark binaryFiles (works with Unity Catalog Volumes)
-    binary_df = spark.read.format("binaryFile").load(volume_path)
-    file_content = binary_df.select("content").collect()[0][0]
-
-    # Load image from bytes
-    img = Image.open(BytesIO(file_content))
-    img = img.convert('RGB')
-    img = img.resize((size, size))
-    img_array = np.array(img) / 255.0
-    return img_array
-
-# COMMAND ----------
 # Make predictions and write to gold.pneumonia_predictions
+# NEW APPROACH: Send file paths instead of image bytes
+# - More efficient (no network overhead)
+# - Models handle their own preprocessing
+# - No type conversion issues
 predictions = []
 
 # First request may take up to 3 minutes for cold start
 first_request = True
 
 for img in test_images:
-    # Preprocess image
-    img_array = preprocess_image(img.file_path)
-
-    # Call A/B endpoint
-    # Convert to float32 for PyTorch compatibility
-    payload = {"inputs": [img_array.astype(np.float32).tolist()]}
+    # Call A/B endpoint with FILE PATH (not image bytes!)
+    payload = {"dataframe_records": [{"file_path": img.file_path}]}
 
     # Use longer timeout for first request (cold start), shorter for subsequent
     timeout = 180 if first_request else 60
