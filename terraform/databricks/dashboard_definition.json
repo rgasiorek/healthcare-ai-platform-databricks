@@ -1,0 +1,100 @@
+{
+  "pages": [
+    {
+      "name": "model_performance",
+      "displayName": "Model Performance",
+      "layout": [
+        {
+          "widget": {
+            "name": "ml_metrics_table",
+            "textbox_spec": null,
+            "queries": [
+              {
+                "name": "ml_metrics",
+                "query": {
+                  "sql": "SELECT p.model_name, p.model_version, COUNT(DISTINCT f.feedback_id) as total_feedback, SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) as true_positives, SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END) as false_positives, SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END) as true_negatives, SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END) as false_negatives, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END), 0), 4) as precision, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END), 0), 4) as recall, ROUND((SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END)) * 1.0 / NULLIF(COUNT(DISTINCT f.feedback_id), 0), 4) as accuracy FROM healthcare_catalog_dev.gold.pneumonia_predictions p INNER JOIN healthcare_catalog_dev.gold.prediction_feedback f ON p.prediction_id = f.prediction_id GROUP BY p.model_name, p.model_version ORDER BY accuracy DESC"
+                }
+              }
+            ],
+            "spec": {
+              "version": "v1",
+              "widgetType": "table"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "confusion_matrix",
+            "queries": [
+              {
+                "name": "confusion",
+                "query": {
+                  "sql": "SELECT f.feedback_type, COUNT(*) as count FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY f.feedback_type ORDER BY CASE f.feedback_type WHEN 'true-positive' THEN 1 WHEN 'false-positive' THEN 2 WHEN 'false-negative' THEN 3 WHEN 'true-negative' THEN 4 ELSE 5 END"
+                }
+              }
+            ],
+            "spec": {
+              "version": "v1",
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "feedback_type",
+                  "displayName": "Feedback Type"
+                },
+                "y": {
+                  "fieldName": "count",
+                  "displayName": "Count"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "performance_trends",
+            "queries": [
+              {
+                "name": "trends",
+                "query": {
+                  "sql": "SELECT DATE_TRUNC('day', f.timestamp) as date, ROUND((SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*), 2) as accuracy_pct FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY DATE_TRUNC('day', f.timestamp) ORDER BY date DESC"
+                }
+              }
+            ],
+            "spec": {
+              "version": "v1",
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date",
+                  "displayName": "Date"
+                },
+                "y": {
+                  "fieldName": "accuracy_pct",
+                  "displayName": "Accuracy %"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ]
+    }
+  ]
+}
