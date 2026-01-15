@@ -12,6 +12,7 @@
               {
                 "name": "ml_metrics",
                 "query": {
+                  "datasetName": "healthcare_catalog_dev.gold",
                   "sql": "SELECT p.model_name, p.model_version, COUNT(DISTINCT f.feedback_id) as total_feedback, SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) as true_positives, SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END) as false_positives, SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END) as true_negatives, SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END) as false_negatives, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-positive' THEN 1 ELSE 0 END), 0), 4) as precision, ROUND(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) * 1.0 / NULLIF(SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'false-negative' THEN 1 ELSE 0 END), 0), 4) as recall, ROUND((SUM(CASE WHEN f.feedback_type = 'true-positive' THEN 1 ELSE 0 END) + SUM(CASE WHEN f.feedback_type = 'true-negative' THEN 1 ELSE 0 END)) * 1.0 / NULLIF(COUNT(DISTINCT f.feedback_id), 0), 4) as accuracy FROM healthcare_catalog_dev.gold.pneumonia_predictions p INNER JOIN healthcare_catalog_dev.gold.prediction_feedback f ON p.prediction_id = f.prediction_id GROUP BY p.model_name, p.model_version ORDER BY accuracy DESC"
                 }
               }
@@ -35,6 +36,7 @@
               {
                 "name": "confusion",
                 "query": {
+                  "datasetName": "healthcare_catalog_dev.gold",
                   "sql": "SELECT f.feedback_type, COUNT(*) as count FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY f.feedback_type ORDER BY CASE f.feedback_type WHEN 'true-positive' THEN 1 WHEN 'false-positive' THEN 2 WHEN 'false-negative' THEN 3 WHEN 'true-negative' THEN 4 ELSE 5 END"
                 }
               }
@@ -68,6 +70,7 @@
               {
                 "name": "trends",
                 "query": {
+                  "datasetName": "healthcare_catalog_dev.gold",
                   "sql": "SELECT DATE_TRUNC('day', f.timestamp) as date, ROUND((SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*), 2) as accuracy_pct FROM healthcare_catalog_dev.gold.prediction_feedback f GROUP BY DATE_TRUNC('day', f.timestamp) ORDER BY date DESC"
                 }
               }
