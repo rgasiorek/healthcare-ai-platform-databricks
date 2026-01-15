@@ -347,16 +347,47 @@ else:
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 5: Compare Performance
+# MAGIC ## Step 5: Update Predictions with Actual Model Names
 # MAGIC
-# MAGIC Basic performance analysis shown below. For real-time monitoring and detailed model comparison,
-# MAGIC see the **Databricks Dashboard** with ML metrics (precision, recall, F1) and confusion matrix.
+# MAGIC The inference logs table (`pneumonia_classifier_payload`) captures which specific model
+# MAGIC (champion vs challenger) served each A/B test request. Let's extract that data.
+
+# COMMAND ----------
+# Extract model names from inference logs and update predictions table
+update_query = f"""
+MERGE INTO {PREDICTIONS_TABLE} AS pred
+USING (
+    SELECT
+        DATE(from_unixtime(timestamp_ms / 1000)) as pred_date,
+        get_json_object(response, '$.predictions[0][0]') as pred_prob,
+        request_metadata['model_name'] as actual_model_name,
+        timestamp_ms
+    FROM healthcare_catalog_dev.gold.pneumonia_classifier_payload
+    WHERE status_code = 200
+      AND date >= CURRENT_DATE() - INTERVAL 7 DAYS
+) AS logs
+ON pred.prediction_date = logs.pred_date
+   AND CAST(pred.prediction_probability AS STRING) = CAST(logs.pred_prob AS STRING)
+   AND ABS(unix_timestamp(pred.predicted_at) * 1000 - logs.timestamp_ms) < 5000
+WHEN MATCHED THEN UPDATE SET
+    pred.model_name = logs.actual_model_name
+"""
+
+try:
+    spark.sql(update_query)
+    print("Updated predictions table with actual model names from inference logs")
+except Exception as e:
+    print(f"Warning: Could not update model names: {e}")
+    print("This is expected if predictions were just made (inference logs may have delay)")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 6: Compare Performance
+# MAGIC
+# MAGIC Now we can compare champion vs challenger performance using the actual model names.
 
 # COMMAND ----------
 # Calculate accuracy by model
-# Note: A/B endpoint doesn't expose which specific model (Keras vs PyTorch) served each request in our current setup
-# For this demo, we'll show overall endpoint performance
-
 performance = spark.sql(f"""
     SELECT
         model_name,
@@ -420,15 +451,22 @@ feedback_analysis.show(truncate=False)
 # MAGIC 3. Data written to `gold.pneumonia_predictions` (Terraform table)
 # MAGIC 4. Feedback collected (simulated radiologist review)
 # MAGIC 5. Data written to `gold.prediction_feedback` (Terraform table)
-# MAGIC 6. Performance monitored (accuracy, confusion matrix)
+# MAGIC 6. Model names extracted from inference logs (auto-captured by Terraform)
+# MAGIC 7. Performance monitored (accuracy, confusion matrix by model)
 # MAGIC
 # MAGIC **Tables Used** (All Terraform-defined):
 # MAGIC - `healthcare_catalog_dev.gold.pneumonia_predictions`
 # MAGIC - `healthcare_catalog_dev.gold.prediction_feedback`
+# MAGIC - `healthcare_catalog_dev.gold.pneumonia_classifier_payload` (inference logs)
+# MAGIC
+# MAGIC **A/B Testing**:
+# MAGIC - Inference logs capture which model (champion/challenger) served each request
+# MAGIC - `request_metadata['model_name']` field contains the actual model name
+# MAGIC - Dashboard compares performance by extracting model names from inference logs
 # MAGIC
 # MAGIC **Real-Time Monitoring**:
-# MAGIC - Use the **Databricks Dashboard** for detailed model comparison with ML metrics
+# MAGIC - Use the **Databricks Dashboard** for detailed champion vs challenger comparison
 # MAGIC
 # MAGIC **Next Steps**:
-# MAGIC - To see true A/B testing (Keras vs PyTorch), we need to capture `served_model_name` from endpoint
 # MAGIC - For production, integrate feedback endpoint (REST API for radiologists)
+# MAGIC - Set up alerts based on model performance metrics
