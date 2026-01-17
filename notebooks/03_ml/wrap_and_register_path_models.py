@@ -77,7 +77,10 @@ class KerasPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Paths are already correct - use as-is
+        # Remove dbfs: prefix (database stores dbfs:/Volumes/..., filesystem is /Volumes/...)
+        if file_path.startswith("dbfs:"):
+            file_path = file_path.replace("dbfs:", "", 1)
+
         img = Image.open(file_path)
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
@@ -197,7 +200,10 @@ class PyTorchPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Paths are already correct - use as-is
+        # Remove dbfs: prefix (database stores dbfs:/Volumes/..., filesystem is /Volumes/...)
+        if file_path.startswith("dbfs:"):
+            file_path = file_path.replace("dbfs:", "", 1)
+
         img = Image.open(file_path)
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
@@ -239,12 +245,15 @@ print("\n" + "=" * 80)
 print("VALIDATING KERAS MODEL (simulating serving container - NO PYSPARK)")
 print("=" * 80)
 
-# Get a real sample path (already in correct format)
+# Get a real sample path from database (has dbfs: prefix)
 test_sample = spark.sql("""
     SELECT file_path FROM healthcare_catalog_dev.bronze.kaggle_xray_metadata LIMIT 1
 """).collect()[0].file_path
 
-print(f"Test file path: {test_sample}")
+print(f"Test file path (from DB): {test_sample}")
+
+# Model will remove dbfs: prefix internally
+print(f"Model will convert to: {test_sample.replace('dbfs:', '', 1)}")
 
 # Block PySpark again for validation
 builtins.__import__ = _block_pyspark_import
