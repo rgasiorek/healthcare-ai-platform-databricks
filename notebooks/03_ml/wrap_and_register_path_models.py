@@ -215,6 +215,79 @@ class PyTorchPathBasedModel(PythonModel):
 # MAGIC ## Step 4: Deploy Keras Model (Path-Based)
 
 # COMMAND ----------
+# MAGIC %md
+# MAGIC ## CRITICAL: Find the Actual Working File Path Format
+
+# COMMAND ----------
+print("=" * 80)
+print("TESTING FILE PATH FORMATS - Finding what actually works")
+print("=" * 80)
+
+# Get a sample path from database
+db_path = spark.sql("""
+    SELECT file_path FROM healthcare_catalog_dev.bronze.kaggle_xray_metadata LIMIT 1
+""").collect()[0].file_path
+
+print(f"\nPath from database: {db_path}")
+
+# Test different path formats
+test_paths = [
+    db_path,                                          # Original: dbfs:/Volumes/...
+    db_path.replace("dbfs:", ""),                     # Remove dbfs: -> /Volumes/...
+    db_path.replace("dbfs:/Volumes/", "/dbfs/Volumes/"),  # /dbfs/Volumes/...
+    db_path.replace("dbfs:", "/dbfs"),                # /dbfs/Volumes/...
+]
+
+import os
+from PIL import Image
+
+working_path = None
+print("\nTesting which path format actually exists and can be opened:\n")
+
+for i, path in enumerate(test_paths, 1):
+    print(f"{i}. Testing: {path}")
+
+    # Check if file exists
+    exists = os.path.exists(path)
+    print(f"   os.path.exists(): {exists}")
+
+    if exists:
+        # Try to open with PIL
+        try:
+            img = Image.open(path)
+            img.load()  # Force load to ensure it works
+            print(f"   PIL.Image.open(): ✓ SUCCESS")
+            print(f"   Image size: {img.size}, mode: {img.mode}")
+            working_path = path
+            break
+        except Exception as e:
+            print(f"   PIL.Image.open(): ✗ FAILED - {e}")
+    print()
+
+if working_path:
+    print("=" * 80)
+    print(f"✓✓✓ FOUND WORKING PATH FORMAT ✓✓✓")
+    print(f"Database provides: {db_path}")
+    print(f"Must convert to:   {working_path}")
+    print("=" * 80)
+
+    # Determine conversion logic
+    if db_path == working_path:
+        print("\nConversion: Use path as-is (no conversion needed)")
+    elif working_path == db_path.replace("dbfs:", ""):
+        print("\nConversion: Remove 'dbfs:' prefix")
+    elif working_path == db_path.replace("dbfs:/Volumes/", "/dbfs/Volumes/"):
+        print("\nConversion: Replace 'dbfs:/Volumes/' with '/dbfs/Volumes/'")
+    elif working_path == db_path.replace("dbfs:", "/dbfs"):
+        print("\nConversion: Replace 'dbfs:' with '/dbfs'")
+else:
+    print("=" * 80)
+    print("✗✗✗ NO WORKING PATH FOUND ✗✗✗")
+    print("CANNOT PROCEED - File is not accessible in any format!")
+    print("=" * 80)
+    raise RuntimeError("Cannot find working file path format")
+
+# COMMAND ----------
 # Setup for validation
 import sys
 import builtins
