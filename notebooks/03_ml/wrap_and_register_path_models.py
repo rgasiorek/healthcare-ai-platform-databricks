@@ -77,14 +77,7 @@ class KerasPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Unity Catalog volumes are mounted at /Volumes/ (not /dbfs/Volumes/)
-        if file_path.startswith("dbfs:/Volumes/"):
-            file_path = file_path.replace("dbfs:", "")
-        elif file_path.startswith("dbfs:"):
-            # Legacy DBFS paths use /dbfs prefix
-            file_path = file_path.replace("dbfs:", "/dbfs")
-
-        # Load image directly from filesystem (no PySpark needed in serving)
+        # Paths are already correct - use as-is
         img = Image.open(file_path)
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
@@ -204,14 +197,7 @@ class PyTorchPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Unity Catalog volumes are mounted at /Volumes/ (not /dbfs/Volumes/)
-        if file_path.startswith("dbfs:/Volumes/"):
-            file_path = file_path.replace("dbfs:", "")
-        elif file_path.startswith("dbfs:"):
-            # Legacy DBFS paths use /dbfs prefix
-            file_path = file_path.replace("dbfs:", "/dbfs")
-
-        # Load image directly from filesystem (no PySpark needed in serving)
+        # Paths are already correct - use as-is
         img = Image.open(file_path)
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
@@ -253,16 +239,10 @@ print("\n" + "=" * 80)
 print("VALIDATING KERAS MODEL (simulating serving container - NO PYSPARK)")
 print("=" * 80)
 
-# Get a real sample path
+# Get a real sample path (already in correct format)
 test_sample = spark.sql("""
     SELECT file_path FROM healthcare_catalog_dev.bronze.kaggle_xray_metadata LIMIT 1
 """).collect()[0].file_path
-
-# Convert to filesystem path (Unity Catalog volumes: /Volumes/, legacy DBFS: /dbfs)
-if test_sample.startswith("dbfs:/Volumes/"):
-    test_sample = test_sample.replace("dbfs:", "")
-elif test_sample.startswith("dbfs:"):
-    test_sample = test_sample.replace("dbfs:", "/dbfs")
 
 print(f"Test file path: {test_sample}")
 
