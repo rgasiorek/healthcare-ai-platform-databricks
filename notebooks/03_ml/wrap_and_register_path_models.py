@@ -77,9 +77,11 @@ class KerasPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Unity Catalog volumes are mounted as filesystem paths in serving containers
-        # Remove dbfs: prefix if present
-        if file_path.startswith("dbfs:"):
+        # Unity Catalog volumes are mounted at /Volumes/ (not /dbfs/Volumes/)
+        if file_path.startswith("dbfs:/Volumes/"):
+            file_path = file_path.replace("dbfs:", "")
+        elif file_path.startswith("dbfs:"):
+            # Legacy DBFS paths use /dbfs prefix
             file_path = file_path.replace("dbfs:", "/dbfs")
 
         # Load image directly from filesystem (no PySpark needed in serving)
@@ -202,9 +204,11 @@ class PyTorchPathBasedModel(PythonModel):
 
     def _load_image_from_path(self, file_path):
         """Load image from Unity Catalog volume path"""
-        # Unity Catalog volumes are mounted as filesystem paths in serving containers
-        # Remove dbfs: prefix if present
-        if file_path.startswith("dbfs:"):
+        # Unity Catalog volumes are mounted at /Volumes/ (not /dbfs/Volumes/)
+        if file_path.startswith("dbfs:/Volumes/"):
+            file_path = file_path.replace("dbfs:", "")
+        elif file_path.startswith("dbfs:"):
+            # Legacy DBFS paths use /dbfs prefix
             file_path = file_path.replace("dbfs:", "/dbfs")
 
         # Load image directly from filesystem (no PySpark needed in serving)
@@ -216,17 +220,10 @@ class PyTorchPathBasedModel(PythonModel):
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 4: VALIDATE in Serving-Like Environment (NO PYSPARK)
+# MAGIC ## Step 4: Deploy Keras Model (Path-Based)
 
 # COMMAND ----------
-print("=" * 80)
-print("CRITICAL VALIDATION: Simulating Model Serving Container Environment")
-print("=" * 80)
-print("\nServing containers DO NOT have PySpark installed.")
-print("If this validation fails, the endpoint will fail after 10-12 min deployment.")
-print("\nBlocking PySpark imports to simulate serving environment...\n")
-
-# Block PySpark imports to simulate serving container
+# Setup for validation
 import sys
 import builtins
 
@@ -236,19 +233,6 @@ def _block_pyspark_import(name, *args, **kwargs):
     if 'pyspark' in name:
         raise ImportError(f"PySpark is not available in serving containers! Attempted import: {name}")
     return _original_import(name, *args, **kwargs)
-
-builtins.__import__ = _block_pyspark_import
-
-print("✓ PySpark imports are now BLOCKED")
-print("=" * 80)
-
-# COMMAND ----------
-# MAGIC %md
-# MAGIC ## Step 5: Deploy Keras Model (Path-Based)
-
-# COMMAND ----------
-# Restore normal imports for model loading
-builtins.__import__ = _original_import
 
 mlflow.set_tracking_uri("databricks")
 mlflow.set_experiment("/Shared/path-based-models")
@@ -274,8 +258,10 @@ test_sample = spark.sql("""
     SELECT file_path FROM healthcare_catalog_dev.bronze.kaggle_xray_metadata LIMIT 1
 """).collect()[0].file_path
 
-# Convert to filesystem path (serving containers use /dbfs not dbfs:)
-if test_sample.startswith("dbfs:"):
+# Convert to filesystem path (Unity Catalog volumes: /Volumes/, legacy DBFS: /dbfs)
+if test_sample.startswith("dbfs:/Volumes/"):
+    test_sample = test_sample.replace("dbfs:", "")
+elif test_sample.startswith("dbfs:"):
     test_sample = test_sample.replace("dbfs:", "/dbfs")
 
 print(f"Test file path: {test_sample}")
@@ -340,7 +326,7 @@ with mlflow.start_run(run_name="keras_remote_file"):
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 6: Deploy PyTorch Model (Path-Based)
+# MAGIC ## Step 5: Deploy PyTorch Model (Path-Based)
 
 # COMMAND ----------
 # Load existing PyTorch model (byte-based version)
