@@ -10,7 +10,7 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
     # Remote file version: accepts Unity Catalog file paths via Files API
     served_entities {
       entity_name    = "healthcare_catalog_${var.environment}.models.pneumonia_poc_classifier_remote_file"
-      entity_version = "6"
+      entity_version = "7"
       workload_size  = "Small"
       scale_to_zero_enabled = true
     }
@@ -19,7 +19,7 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
     # Remote file version: accepts Unity Catalog file paths via Files API
     served_entities {
       entity_name    = "healthcare_catalog_${var.environment}.models.pneumonia_poc_classifier_pytorch_remote_file"
-      entity_version = "6"
+      entity_version = "7"
       workload_size  = "Small"
       scale_to_zero_enabled = true
     }
@@ -27,11 +27,11 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
     # Traffic Split Configuration (A/B Testing)
     traffic_config {
       routes {
-        served_model_name   = "pneumonia_poc_classifier_remote_file-6"
+        served_model_name   = "pneumonia_poc_classifier_remote_file-7"
         traffic_percentage  = 50
       }
       routes {
-        served_model_name   = "pneumonia_poc_classifier_pytorch_remote_file-6"
+        served_model_name   = "pneumonia_poc_classifier_pytorch_remote_file-7"
         traffic_percentage  = 50
       }
     }
