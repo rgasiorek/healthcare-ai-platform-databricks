@@ -76,12 +76,20 @@ class KerasPathBasedModel(PythonModel):
         return np.array(predictions)
 
     def _load_image_from_path(self, file_path):
-        """Load image from Unity Catalog volume path"""
-        # Remove dbfs: prefix (database stores dbfs:/Volumes/..., filesystem is /Volumes/...)
+        """Load image from Unity Catalog volume path using Files API"""
+        from databricks.sdk import WorkspaceClient
+        from io import BytesIO
+
+        # Convert dbfs:/Volumes/... to /Volumes/... for Files API
         if file_path.startswith("dbfs:"):
             file_path = file_path.replace("dbfs:", "", 1)
 
-        img = Image.open(file_path)
+        # Use Files API to download from Unity Catalog volume
+        w = WorkspaceClient()
+        file_content = w.files.download(file_path).contents.read()
+
+        # Load image from bytes
+        img = Image.open(BytesIO(file_content))
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
 
@@ -199,12 +207,20 @@ class PyTorchPathBasedModel(PythonModel):
         return np.array(predictions)
 
     def _load_image_from_path(self, file_path):
-        """Load image from Unity Catalog volume path"""
-        # Remove dbfs: prefix (database stores dbfs:/Volumes/..., filesystem is /Volumes/...)
+        """Load image from Unity Catalog volume path using Files API"""
+        from databricks.sdk import WorkspaceClient
+        from io import BytesIO
+
+        # Convert dbfs:/Volumes/... to /Volumes/... for Files API
         if file_path.startswith("dbfs:"):
             file_path = file_path.replace("dbfs:", "", 1)
 
-        img = Image.open(file_path)
+        # Use Files API to download from Unity Catalog volume
+        w = WorkspaceClient()
+        file_content = w.files.download(file_path).contents.read()
+
+        # Load image from bytes
+        img = Image.open(BytesIO(file_content))
         img = img.convert('RGB')
         img = img.resize((self.image_size, self.image_size))
 
@@ -380,7 +396,8 @@ with mlflow.start_run(run_name="keras_remote_file"):
         pip_requirements=[
             "tensorflow==2.15.0",
             "pillow",
-            "numpy<2"
+            "numpy<2",
+            "databricks-sdk"
         ]
     )
 
@@ -451,7 +468,8 @@ with mlflow.start_run(run_name="pytorch_remote_file"):
         pip_requirements=[
             "torch==2.1.0",
             "pillow",
-            "numpy<2"
+            "numpy<2",
+            "databricks-sdk"
         ]
     )
 
