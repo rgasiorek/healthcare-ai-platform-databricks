@@ -164,7 +164,7 @@ for img in test_images:
                 'true_label': 1 if img.category == 'PNEUMONIA' else 0,  # We know true label from bronze
                 'is_correct': (predicted_label == (1 if img.category == 'PNEUMONIA' else 0)),
                 'model_name': ENDPOINT_NAME,  # A/B endpoint name
-                'model_version': '1',
+                'model_version': '5',  # Both Keras and PyTorch models in A/B test are v5
                 'predicted_at': datetime.now(),
                 'prediction_date': datetime.now().date()
             }
