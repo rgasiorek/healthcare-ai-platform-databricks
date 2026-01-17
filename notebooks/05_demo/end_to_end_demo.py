@@ -13,10 +13,12 @@
 # MAGIC - `gold.prediction_feedback` (ground truth from radiologists)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Setup
 
 # COMMAND ----------
+
 import requests
 import json
 import uuid
@@ -47,6 +49,7 @@ print(f"  Predictions Table: {PREDICTIONS_TABLE}")
 print(f"  Feedback Table: {FEEDBACK_TABLE}")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 1: Warm Up Endpoint (First Request)
 # MAGIC
@@ -59,6 +62,7 @@ print(f"  Feedback Table: {FEEDBACK_TABLE}")
 # MAGIC Once warm, subsequent requests complete in seconds.
 
 # COMMAND ----------
+
 print("Warming up endpoint (this may take 2-3 minutes)...")
 print("  Endpoint configured with scale_to_zero_enabled = true")
 print("  - Cost savings: no charges when idle")
@@ -89,6 +93,7 @@ except Exception as e:
     print("  The endpoint may still be starting up. Try running the next cells in a few minutes.")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 2: Make Predictions (5-10 predictions)
 # MAGIC
@@ -98,6 +103,7 @@ except Exception as e:
 # MAGIC - Better separation: each model controls its own preprocessing
 
 # COMMAND ----------
+
 # Load test images from bronze
 test_images = spark.sql(f"""
     SELECT image_id, filename, category, file_path
@@ -109,6 +115,7 @@ print(f"Loaded {len(test_images)} test images")
 print("-" * 80)
 
 # COMMAND ----------
+
 # Make predictions and write to gold.pneumonia_predictions
 # NEW APPROACH: Send file paths instead of image bytes
 # - More efficient (no network overhead)
@@ -176,6 +183,7 @@ for img in test_images:
 print(f"\nMade {len(predictions)} predictions")
 
 # COMMAND ----------
+
 # Write predictions to gold.pneumonia_predictions (Terraform table)
 if predictions:
     # Define schema to match Terraform table exactly
@@ -204,10 +212,12 @@ else:
     print("No predictions to write")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 3: Verify Predictions in Table
 
 # COMMAND ----------
+
 # Query our Terraform table
 recent_predictions = spark.sql(f"""
     SELECT
@@ -229,6 +239,7 @@ print("=" * 120)
 recent_predictions.show(truncate=False)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 4: Submit Radiologist Feedback
 # MAGIC
@@ -248,6 +259,7 @@ recent_predictions.show(truncate=False)
 # MAGIC **Or use the automated batch feedback below for quick testing:**
 
 # COMMAND ----------
+
 # Get predictions that don't have feedback yet
 pending_feedback = spark.sql(f"""
     SELECT
@@ -268,6 +280,7 @@ print(f"Found {len(pending_feedback)} predictions awaiting feedback")
 print("-" * 80)
 
 # COMMAND ----------
+
 # Automated batch feedback for demo
 # In production, use the Streamlit app for interactive review
 feedback_records = []
@@ -313,6 +326,7 @@ for pred in pending_feedback:
 print(f"\nCollected {len(feedback_records)} feedback submissions")
 
 # COMMAND ----------
+
 # Write feedback to gold.prediction_feedback (Terraform table)
 if feedback_records:
     feedback_df = spark.createDataFrame(feedback_records)
@@ -324,6 +338,7 @@ else:
     print("No feedback to write")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 5: Update Predictions with Actual Model Names
 # MAGIC
@@ -331,6 +346,7 @@ else:
 # MAGIC (champion vs challenger) served each A/B test request. Let's extract that data.
 
 # COMMAND ----------
+
 # Extract model names from inference logs and update predictions table
 update_query = f"""
 MERGE INTO {PREDICTIONS_TABLE} AS pred
@@ -359,12 +375,14 @@ except Exception as e:
     print("This is expected if predictions were just made (inference logs may have delay)")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Step 6: Compare Performance
 # MAGIC
 # MAGIC Now we can compare champion vs challenger performance using the actual model names.
 
 # COMMAND ----------
+
 # Calculate accuracy by model
 performance = spark.sql(f"""
     SELECT
@@ -384,6 +402,7 @@ print("=" * 80)
 performance.show(truncate=False)
 
 # COMMAND ----------
+
 # Confusion Matrix (with feedback)
 confusion = spark.sql(f"""
     SELECT
@@ -399,6 +418,7 @@ print("=" * 80)
 confusion.show(truncate=False)
 
 # COMMAND ----------
+
 # Detailed feedback analysis
 feedback_analysis = spark.sql(f"""
     SELECT
@@ -419,6 +439,7 @@ print("=" * 80)
 feedback_analysis.show(truncate=False)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Summary
 # MAGIC

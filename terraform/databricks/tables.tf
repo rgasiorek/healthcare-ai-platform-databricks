@@ -9,7 +9,7 @@ resource "databricks_sql_table" "bronze_kaggle_metadata" {
   name               = "kaggle_xray_metadata"
   catalog_name       = databricks_catalog.healthcare.name
   schema_name        = databricks_schema.bronze.name
-  table_type         = "MANAGED"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.bronze.url}/kaggle_xray_metadata"
 
@@ -80,7 +80,7 @@ resource "databricks_sql_table" "silver_xray_metadata" {
   name               = "xray_metadata"
   catalog_name       = databricks_catalog.healthcare.name
   schema_name        = databricks_schema.silver.name
-  table_type         = "MANAGED"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.silver.url}/xray_metadata"
 
@@ -161,7 +161,7 @@ resource "databricks_sql_table" "silver_image_features" {
   name               = "image_features"
   catalog_name       = databricks_catalog.healthcare.name
   schema_name        = databricks_schema.silver.name
-  table_type         = "MANAGED"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.silver.url}/image_features"
 
@@ -218,7 +218,7 @@ resource "databricks_sql_table" "gold_predictions" {
   name               = "pneumonia_predictions"
   catalog_name       = databricks_catalog.healthcare.name
   schema_name        = databricks_schema.gold.name
-  table_type         = "MANAGED"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.gold.url}/pneumonia_predictions"
 
@@ -303,7 +303,7 @@ resource "databricks_sql_table" "gold_model_performance" {
   name               = "model_performance"
   catalog_name       = databricks_catalog.healthcare.name
   schema_name        = databricks_schema.gold.name
-  table_type         = "MANAGED"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.gold.url}/model_performance"
 
@@ -401,7 +401,7 @@ resource "databricks_sql_table" "gold_prediction_feedback" {
   catalog_name = databricks_catalog.healthcare.name
   schema_name  = databricks_schema.gold.name
   name         = "prediction_feedback"
-  table_type   = "MANAGED"
+  table_type   = "EXTERNAL"
   data_source_format = "DELTA"
 
   comment = "Ground truth labels for model predictions - enables accuracy tracking and Champion/Challenger A/B testing"
