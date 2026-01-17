@@ -43,6 +43,13 @@ resource "databricks_notebook" "deploy_ab_testing_endpoint" {
   source   = "${path.module}/../../notebooks/03_ml/deploy_ab_testing_endpoint.py"
 }
 
+# Wrap and Register Path-Based Models (Files API)
+resource "databricks_notebook" "wrap_and_register_path_models" {
+  path     = "/Shared/wrap_and_register_path_models"
+  language = "PYTHON"
+  source   = "${path.module}/../../notebooks/03_ml/wrap_and_register_path_models.py"
+}
+
 # ML Demo: SDK vs REST API Model Usage
 resource "databricks_notebook" "demo_model_usage" {
   path     = "/Shared/demo-model-usage"
