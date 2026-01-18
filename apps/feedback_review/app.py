@@ -51,11 +51,11 @@ with st.sidebar:
     st.markdown("### Instructions")
     st.markdown("""
     1. Review predictions in the table
-    2. Edit the **editable columns**:
+    2. Click image link to view X-ray
+    3. Edit the **editable columns**:
        - Ground Truth
-       - Confidence
        - Notes
-    3. Click "Submit All Feedback" when done
+    4. Click "Submit All Feedback" when done
 
     **Note**: Only highlighted columns are editable
     """)
@@ -72,9 +72,13 @@ def get_predictions_for_review():
             p.prediction_probability,
             CASE WHEN p.true_label = 1 THEN 'PNEUMONIA' ELSE 'NORMAL' END as actual_diagnosis,
             p.model_name,
-            p.predicted_at
+            p.predicted_at,
+            -- Get image path from inference logs
+            logs.request AS image_request
         FROM {PREDICTIONS_TABLE} p
         LEFT JOIN {FEEDBACK_TABLE} f ON p.prediction_id = f.prediction_id
+        LEFT JOIN healthcare_catalog_dev.gold.pneumonia_classifier_payload logs
+            ON p.prediction_id = logs.databricks_request_id
         WHERE f.feedback_id IS NULL
         ORDER BY p.predicted_at DESC
         LIMIT 50
@@ -130,7 +134,7 @@ def save_feedback(feedback_df, radiologist_id):
             'ground_truth': ground_truth,
             'feedback_type': feedback_type,
             'radiologist_id': radiologist_id,
-            'confidence': row['confidence'],
+            'confidence': 'confirmed',  # Always confirmed for dashboard compatibility
             'feedback_source': 'streamlit_app',
             'notes': row.get('notes', '')
         }
@@ -194,7 +198,7 @@ def save_feedback(feedback_df, radiologist_id):
 # Main app
 try:
     st.markdown("### Edit Feedback")
-    st.markdown("**Editable columns**: Ground Truth, Confidence, Notes")
+    st.markdown("**Editable columns**: Ground Truth, Notes | **Image**: Click to view X-ray")
 
     # Create placeholder/loading indicator
     loading_placeholder = st.empty()
@@ -207,8 +211,8 @@ try:
         'prediction_probability': [0.0, 0.0, 0.0],
         'actual_diagnosis': ['', '', ''],
         'predicted_at': ['', '', ''],
+        'image_path': ['', '', ''],
         'ground_truth': ['PNEUMONIA', 'PNEUMONIA', 'PNEUMONIA'],
-        'confidence': ['confirmed', 'confirmed', 'confirmed'],
         'notes': ['', '', '']
     })
 
@@ -225,8 +229,8 @@ try:
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f"),
                 "actual_diagnosis": "Actual (Known)",
                 "predicted_at": "Timestamp",
+                "image_path": "Image",
                 "ground_truth": "Ground Truth",
-                "confidence": "Confidence",
                 "notes": "Notes"
             },
             hide_index=True,
@@ -244,9 +248,20 @@ try:
         st.info("No predictions awaiting feedback. All caught up.")
         st.stop()
 
+    # Extract image path from JSON request
+    import json
+    def extract_image_path(request_json):
+        try:
+            if request_json:
+                req = json.loads(request_json)
+                return req.get('dataframe_records', [{}])[0].get('file_path', '')
+        except:
+            return ''
+
+    predictions_df['image_path'] = predictions_df['image_request'].apply(extract_image_path)
+
     # Prepare editable dataframe
     predictions_df['ground_truth'] = predictions_df['actual_diagnosis']
-    predictions_df['confidence'] = 'confirmed'
     predictions_df['notes'] = ''
 
     # Display readonly columns first, then editable ones
@@ -256,8 +271,8 @@ try:
         'prediction_probability',
         'actual_diagnosis',
         'predicted_at',
+        'image_path',
         'ground_truth',
-        'confidence',
         'notes'
     ]].copy()
 
@@ -278,16 +293,11 @@ try:
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f", width="small", disabled=True),
                 "actual_diagnosis": st.column_config.TextColumn("Actual (Known)", width="small", disabled=True),
                 "predicted_at": st.column_config.TextColumn("Timestamp", width="medium", disabled=True),
+                "image_path": st.column_config.LinkColumn("Image", width="medium", disabled=True, display_text="View X-ray"),
                 "ground_truth": st.column_config.SelectboxColumn(
                     "Ground Truth",
                     width="medium",
                     options=["PNEUMONIA", "NORMAL"],
-                    required=True
-                ),
-                "confidence": st.column_config.SelectboxColumn(
-                    "Confidence",
-                    width="medium",
-                    options=["confirmed", "uncertain", "needs_review"],
                     required=True
                 ),
                 "notes": st.column_config.TextColumn("Notes", width="large")
@@ -327,17 +337,13 @@ try:
     st.markdown("---")
     st.markdown("### Review Summary")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         matches = (edited_df['ai_prediction'] == edited_df['ground_truth']).sum()
         st.metric("AI Matches Ground Truth", f"{matches}/{len(edited_df)}")
 
     with col2:
-        confirmed_count = (edited_df['confidence'] == 'confirmed').sum()
-        st.metric("Confirmed Diagnoses", confirmed_count)
-
-    with col3:
         has_notes = edited_df['notes'].str.len().gt(0).sum()
         st.metric("With Notes", has_notes)
 
