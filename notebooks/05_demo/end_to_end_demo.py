@@ -350,7 +350,7 @@ else:
 # MAGIC 4. ✅ Radiologist feedback submitted to gold.prediction_feedback
 # MAGIC
 # MAGIC **Next Steps:**
-# MAGIC - Use Streamlit app (`apps/feedback_review`) for interactive feedback collection
+# MAGIC - Use Streamlit app for interactive feedback collection: https://github.com/rgasiorek/healthcare-ai-platform-databricks/tree/main/apps/feedback_review
 # MAGIC - View analytics in BI dashboard to compare model performance
 # MAGIC - Check inference logs table to see which model (champion/challenger) served each request
 
