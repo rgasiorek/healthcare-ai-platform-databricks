@@ -337,135 +337,21 @@ if feedback_records:
 else:
     print("No feedback to write")
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 5: Update Predictions with Actual Model Names
-# MAGIC
-# MAGIC The inference logs table (`pneumonia_classifier_payload`) captures which specific model
-# MAGIC (champion vs challenger) served each A/B test request. Let's extract that data.
-
-# COMMAND ----------
-
-# Extract model names from inference logs and update predictions table
-update_query = f"""
-MERGE INTO {PREDICTIONS_TABLE} AS pred
-USING (
-    SELECT
-        DATE(from_unixtime(timestamp_ms / 1000)) as pred_date,
-        get_json_object(response, '$.predictions[0][0]') as pred_prob,
-        request_metadata['model_name'] as actual_model_name,
-        timestamp_ms
-    FROM healthcare_catalog_dev.gold.pneumonia_classifier_payload
-    WHERE status_code = 200
-      AND date >= CURRENT_DATE() - INTERVAL 7 DAYS
-) AS logs
-ON pred.prediction_date = logs.pred_date
-   AND CAST(pred.prediction_probability AS STRING) = CAST(logs.pred_prob AS STRING)
-   AND ABS(unix_timestamp(pred.predicted_at) * 1000 - logs.timestamp_ms) < 5000
-WHEN MATCHED THEN UPDATE SET
-    pred.model_name = logs.actual_model_name
-"""
-
-try:
-    spark.sql(update_query)
-    print("Updated predictions table with actual model names from inference logs")
-except Exception as e:
-    print(f"Warning: Could not update model names: {e}")
-    print("This is expected if predictions were just made (inference logs may have delay)")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 6: Compare Performance
-# MAGIC
-# MAGIC Now we can compare champion vs challenger performance using the actual model names.
-
-# COMMAND ----------
-
-# Calculate accuracy by model
-performance = spark.sql(f"""
-    SELECT
-        model_name,
-        COUNT(*) as total_predictions,
-        SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_predictions,
-        ROUND(AVG(CASE WHEN is_correct THEN 1.0 ELSE 0.0 END) * 100, 2) as accuracy_pct,
-        COUNT(DISTINCT f.feedback_id) as feedback_count,
-        ROUND(COUNT(DISTINCT f.feedback_id) * 100.0 / COUNT(*), 2) as feedback_coverage_pct
-    FROM {PREDICTIONS_TABLE} p
-    LEFT JOIN {FEEDBACK_TABLE} f ON p.prediction_id = f.prediction_id
-    GROUP BY model_name
-""")
-
-print("\nMODEL PERFORMANCE:")
-print("=" * 80)
-performance.show(truncate=False)
-
-# COMMAND ----------
-
-# Confusion Matrix (with feedback)
-confusion = spark.sql(f"""
-    SELECT
-        f.feedback_type,
-        COUNT(*) as count
-    FROM {FEEDBACK_TABLE} f
-    GROUP BY f.feedback_type
-    ORDER BY f.feedback_type
-""")
-
-print("\nCONFUSION MATRIX (From Feedback):")
-print("=" * 80)
-confusion.show(truncate=False)
-
-# COMMAND ----------
-
-# Detailed feedback analysis
-feedback_analysis = spark.sql(f"""
-    SELECT
-        p.prediction_id,
-        CASE WHEN p.predicted_label = 1 THEN 'PNEUMONIA' ELSE 'NORMAL' END as ai_prediction,
-        f.ground_truth,
-        f.feedback_type,
-        p.prediction_probability,
-        f.radiologist_id,
-        f.timestamp
-    FROM {PREDICTIONS_TABLE} p
-    INNER JOIN {FEEDBACK_TABLE} f ON p.prediction_id = f.prediction_id
-    ORDER BY f.timestamp DESC
-""")
-
-print("\nFEEDBACK ANALYSIS:")
-print("=" * 80)
-feedback_analysis.show(truncate=False)
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Summary
 # MAGIC
-# MAGIC **Complete MLOps Workflow Demonstrated**:
+# MAGIC **End-to-End Workflow Complete:**
+# MAGIC 1. ✅ Endpoint warmed up and serving predictions
+# MAGIC 2. ✅ A/B test predictions generated and logged to gold.pneumonia_predictions
+# MAGIC 3. ✅ Inference logs captured for model tracking
+# MAGIC 4. ✅ Radiologist feedback submitted to gold.prediction_feedback
 # MAGIC
-# MAGIC 1. Endpoint warmed up (scale-from-zero handling)
-# MAGIC 2. Predictions made via A/B testing endpoint
-# MAGIC 3. Data written to `gold.pneumonia_predictions` (Terraform table)
-# MAGIC 4. Feedback collected (simulated radiologist review)
-# MAGIC 5. Data written to `gold.prediction_feedback` (Terraform table)
-# MAGIC 6. Model names extracted from inference logs (auto-captured by Terraform)
-# MAGIC 7. Performance monitored (accuracy, confusion matrix by model)
-# MAGIC
-# MAGIC **Tables Used** (All Terraform-defined):
-# MAGIC - `healthcare_catalog_dev.gold.pneumonia_predictions`
-# MAGIC - `healthcare_catalog_dev.gold.prediction_feedback`
-# MAGIC - `healthcare_catalog_dev.gold.pneumonia_classifier_payload` (inference logs)
-# MAGIC
-# MAGIC **A/B Testing**:
-# MAGIC - Inference logs capture which model (champion/challenger) served each request
-# MAGIC - `request_metadata['model_name']` field contains the actual model name
-# MAGIC - Dashboard compares performance by extracting model names from inference logs
-# MAGIC
-# MAGIC **Real-Time Monitoring**:
-# MAGIC - Use the **Databricks Dashboard** for detailed champion vs challenger comparison
-# MAGIC
-# MAGIC **Next Steps**:
-# MAGIC - For production, integrate feedback endpoint (REST API for radiologists)
-# MAGIC - Set up alerts based on model performance metrics
+# MAGIC **Next Steps:**
+# MAGIC - Use Streamlit app (`apps/feedback_review`) for interactive feedback collection
+# MAGIC - View analytics in BI dashboard to compare model performance
+# MAGIC - Check inference logs table to see which model (champion/challenger) served each request
+
+# COMMAND ----------
