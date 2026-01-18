@@ -54,6 +54,10 @@ module "databricks" {
   metastore_iam_role_arn        = module.aws.metastore_iam_role_arn
   data_access_iam_role_arn      = module.aws.data_access_iam_role_arn
 
+  # Model Serving Authentication
+  databricks_workspace_host      = var.databricks_workspace_host
+  databricks_model_serving_token = var.databricks_model_serving_token
+
   # Module dependencies
   depends_on = [module.aws]
 }

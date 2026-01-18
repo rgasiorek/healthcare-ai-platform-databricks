@@ -10,7 +10,7 @@
 # MAGIC - Each model handles its own preprocessing
 
 # COMMAND ----------
-# MAGIC %pip install mlflow tensorflow==2.15.0 torch==2.1.0 pillow --quiet
+# MAGIC %pip install mlflow tensorflow==2.15.0 torch==2.1.0 pillow databricks-sdk 'anyio<4' --quiet
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -79,13 +79,18 @@ class KerasPathBasedModel(PythonModel):
         """Load image from Unity Catalog volume path using Files API"""
         from databricks.sdk import WorkspaceClient
         from io import BytesIO
+        import os
 
         # Convert dbfs:/Volumes/... to /Volumes/... for Files API
         if file_path.startswith("dbfs:"):
             file_path = file_path.replace("dbfs:", "", 1)
 
         # Use Files API to download from Unity Catalog volume
-        w = WorkspaceClient()
+        # Explicitly use environment variables (available in serving containers)
+        w = WorkspaceClient(
+            host=os.environ.get("DATABRICKS_HOST"),
+            token=os.environ.get("DATABRICKS_TOKEN")
+        )
         file_content = w.files.download(file_path).contents.read()
 
         # Load image from bytes
@@ -210,13 +215,18 @@ class PyTorchPathBasedModel(PythonModel):
         """Load image from Unity Catalog volume path using Files API"""
         from databricks.sdk import WorkspaceClient
         from io import BytesIO
+        import os
 
         # Convert dbfs:/Volumes/... to /Volumes/... for Files API
         if file_path.startswith("dbfs:"):
             file_path = file_path.replace("dbfs:", "", 1)
 
         # Use Files API to download from Unity Catalog volume
-        w = WorkspaceClient()
+        # Explicitly use environment variables (available in serving containers)
+        w = WorkspaceClient(
+            host=os.environ.get("DATABRICKS_HOST"),
+            token=os.environ.get("DATABRICKS_TOKEN")
+        )
         file_content = w.files.download(file_path).contents.read()
 
         # Load image from bytes
@@ -324,7 +334,8 @@ with mlflow.start_run(run_name="keras_remote_file"):
             "tensorflow==2.15.0",
             "pillow",
             "numpy<2",
-            "databricks-sdk"
+            "databricks-sdk",
+            "anyio<4"
         ]
     )
 
@@ -396,7 +407,8 @@ with mlflow.start_run(run_name="pytorch_remote_file"):
             "torch==2.1.0",
             "pillow",
             "numpy<2",
-            "databricks-sdk"
+            "databricks-sdk",
+            "anyio<4"
         ]
     )
 

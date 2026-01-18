@@ -148,8 +148,8 @@ for img in test_images:
             pred_prob = float(result['predictions'][0][0])  # Ensure it's a Python float
             predicted_label = 1 if pred_prob > 0.5 else 0
 
-            # Generate prediction_id
-            prediction_id = f"pred-{uuid.uuid4().hex[:12]}"
+            # Use databricks-request-id from response headers (matches inference logs table)
+            prediction_id = response.headers.get('databricks-request-id', f"pred-{uuid.uuid4().hex[:12]}")
 
             # Calculate confidence (distance from 0.5 threshold)
             confidence_score = pred_prob if pred_prob > 0.5 else (1 - pred_prob)
