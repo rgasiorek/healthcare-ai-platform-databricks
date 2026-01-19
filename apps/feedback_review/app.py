@@ -42,8 +42,8 @@ st.set_page_config(
 # Check if this is an image viewer request
 query_params = st.query_params
 if "image" in query_params:
-    # Image viewer mode
-    image_path = query_params["image"]
+    # Image viewer mode - receives only image_id (not full path)
+    image_id = query_params["image"]
 
     st.title("X-Ray Image Viewer")
 
@@ -53,6 +53,41 @@ if "image" in query_params:
         st.rerun()
 
     try:
+        # Look up full path from bronze table using image_id
+        lookup_query = f"""
+            SELECT file_path, filename
+            FROM {CATALOG}.bronze.kaggle_xray_metadata
+            WHERE image_id = '{image_id}'
+            LIMIT 1
+        """
+
+        if USE_SQL_CONNECTOR:
+            connection = sql.connect(
+                server_hostname=st.secrets["databricks"]["server_hostname"],
+                http_path=st.secrets["databricks"]["http_path"],
+                access_token=st.secrets["databricks"]["access_token"]
+            )
+            cursor = connection.cursor()
+            cursor.execute(lookup_query)
+            result = cursor.fetchone()
+            cursor.close()
+            connection.close()
+
+            if not result:
+                st.error(f"Image not found: {image_id}")
+                st.stop()
+
+            image_path, filename = result
+        else:
+            result = spark.sql(lookup_query).collect()
+            if not result:
+                st.error(f"Image not found: {image_id}")
+                st.stop()
+
+            image_path = result[0].file_path
+            filename = result[0].filename
+
+        # Now load the image using the internal path
         if IS_DATABRICKS:
             # In Databricks Apps: Use Files API
             from databricks.sdk import WorkspaceClient
@@ -68,7 +103,7 @@ if "image" in query_params:
 
             # Display image
             img = Image.open(BytesIO(file_content))
-            st.image(img, caption=image_path.split('/')[-1], use_container_width=True)
+            st.image(img, caption=filename, use_container_width=True)
         else:
             # Running locally: Use /dbfs path
             if image_path.startswith("dbfs:"):
@@ -76,11 +111,12 @@ if "image" in query_params:
             else:
                 local_path = f"/dbfs{image_path}"
 
-            st.image(local_path, caption=image_path.split('/')[-1], use_container_width=True)
+            st.image(local_path, caption=filename, use_container_width=True)
 
     except Exception as e:
         st.error(f"Failed to load image: {e}")
-        st.code(f"Image path: {image_path}")
+        import traceback
+        st.code(traceback.format_exc())
 
     st.stop()
 
@@ -301,8 +337,8 @@ try:
     predictions_df['ground_truth'] = None  # Start empty - radiologist must select
     predictions_df['notes'] = ''
 
-    # Create image viewer links with query parameters
-    predictions_df['image_link'] = predictions_df['image_path'].apply(
+    # Create image viewer links with query parameters (only pass image_id, not full path)
+    predictions_df['image_link'] = predictions_df['image_id'].apply(
         lambda x: f"?image={x}" if pd.notna(x) and x else None
     )
 
