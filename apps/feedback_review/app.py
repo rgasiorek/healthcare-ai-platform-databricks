@@ -53,18 +53,34 @@ if "image" in query_params:
         st.rerun()
 
     try:
-        # Convert dbfs path to /dbfs path for direct access
-        if image_path.startswith("dbfs:"):
-            local_path = image_path.replace("dbfs:", "/dbfs")
-        else:
-            local_path = f"/dbfs{image_path}"
+        if IS_DATABRICKS:
+            # In Databricks Apps: Use Files API
+            from databricks.sdk import WorkspaceClient
+            from PIL import Image
+            from io import BytesIO
 
-        # Display image
-        st.image(local_path, caption=image_path.split('/')[-1], use_container_width=True)
+            # Remove dbfs: prefix for Files API
+            clean_path = image_path.replace("dbfs:", "")
+
+            # Use Files API to download
+            w = WorkspaceClient()
+            file_content = w.files.download(clean_path).contents.read()
+
+            # Display image
+            img = Image.open(BytesIO(file_content))
+            st.image(img, caption=image_path.split('/')[-1], use_container_width=True)
+        else:
+            # Running locally: Use /dbfs path
+            if image_path.startswith("dbfs:"):
+                local_path = image_path.replace("dbfs:", "/dbfs")
+            else:
+                local_path = f"/dbfs{image_path}"
+
+            st.image(local_path, caption=image_path.split('/')[-1], use_container_width=True)
 
     except Exception as e:
         st.error(f"Failed to load image: {e}")
-        st.code(f"Tried path: {local_path}")
+        st.code(f"Image path: {image_path}")
 
     st.stop()
 
