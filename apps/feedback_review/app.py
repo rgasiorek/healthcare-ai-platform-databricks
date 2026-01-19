@@ -46,75 +46,73 @@ if "image" in query_params:
     image_id = query_params["image"]
 
     st.title("X-Ray Image Viewer")
-
-    # Add back button
-    if st.button("← Back to Feedback Table"):
-        st.query_params.clear()
-        st.rerun()
+    st.markdown(f"**Image ID:** {image_id}")
 
     try:
-        # Look up full path from bronze table using image_id
-        lookup_query = f"""
-            SELECT file_path, filename
-            FROM {CATALOG}.bronze.kaggle_xray_metadata
-            WHERE image_id = '{image_id}'
-            LIMIT 1
-        """
+        # Show loading spinner while fetching image
+        with st.spinner("Loading X-ray image..."):
+            # Look up full path from bronze table using image_id
+            lookup_query = f"""
+                SELECT file_path, filename
+                FROM {CATALOG}.bronze.kaggle_xray_metadata
+                WHERE image_id = '{image_id}'
+                LIMIT 1
+            """
 
-        if USE_SQL_CONNECTOR:
-            connection = sql.connect(
-                server_hostname=st.secrets["databricks"]["server_hostname"],
-                http_path=st.secrets["databricks"]["http_path"],
-                access_token=st.secrets["databricks"]["access_token"]
-            )
-            cursor = connection.cursor()
-            cursor.execute(lookup_query)
-            result = cursor.fetchone()
-            cursor.close()
-            connection.close()
+            if USE_SQL_CONNECTOR:
+                connection = sql.connect(
+                    server_hostname=st.secrets["databricks"]["server_hostname"],
+                    http_path=st.secrets["databricks"]["http_path"],
+                    access_token=st.secrets["databricks"]["access_token"]
+                )
+                cursor = connection.cursor()
+                cursor.execute(lookup_query)
+                result = cursor.fetchone()
+                cursor.close()
+                connection.close()
 
-            if not result:
-                st.error(f"Image not found: {image_id}")
-                st.stop()
+                if not result:
+                    st.error(f"Image not found: {image_id}")
+                    st.stop()
 
-            image_path, filename = result
-        else:
-            result = spark.sql(lookup_query).collect()
-            if not result:
-                st.error(f"Image not found: {image_id}")
-                st.stop()
+                image_path, filename = result
+            else:
+                result = spark.sql(lookup_query).collect()
+                if not result:
+                    st.error(f"Image not found: {image_id}")
+                    st.stop()
 
-            image_path = result[0].file_path
-            filename = result[0].filename
+                image_path = result[0].file_path
+                filename = result[0].filename
 
-        # Load the image using Files API (works both locally and in Databricks Apps)
-        from databricks.sdk import WorkspaceClient
-        from PIL import Image
-        from io import BytesIO
+            # Load the image using Files API (works both locally and in Databricks Apps)
+            from databricks.sdk import WorkspaceClient
+            from PIL import Image
+            from io import BytesIO
 
-        # Remove dbfs: prefix for Files API
-        clean_path = image_path.replace("dbfs:", "")
+            # Remove dbfs: prefix for Files API
+            clean_path = image_path.replace("dbfs:", "")
 
-        # Use Files API to download (with credentials for local mode)
-        if IS_DATABRICKS:
-            # In Databricks Apps: use default auth
-            w = WorkspaceClient()
-        else:
-            # Running locally: use credentials from secrets
-            # Extract workspace host from SQL warehouse hostname (e.g., "dbc-xxx.cloud.databricks.com")
-            sql_hostname = st.secrets["databricks"]["server_hostname"]
-            workspace_host = sql_hostname.split('/')[0] if '/' in sql_hostname else sql_hostname
+            # Use Files API to download (with credentials for local mode)
+            if IS_DATABRICKS:
+                # In Databricks Apps: use default auth
+                w = WorkspaceClient()
+            else:
+                # Running locally: use credentials from secrets
+                # Extract workspace host from SQL warehouse hostname (e.g., "dbc-xxx.cloud.databricks.com")
+                sql_hostname = st.secrets["databricks"]["server_hostname"]
+                workspace_host = sql_hostname.split('/')[0] if '/' in sql_hostname else sql_hostname
 
-            w = WorkspaceClient(
-                host=f"https://{workspace_host}",
-                token=st.secrets["databricks"]["access_token"]
-            )
+                w = WorkspaceClient(
+                    host=f"https://{workspace_host}",
+                    token=st.secrets["databricks"]["access_token"]
+                )
 
-        file_content = w.files.download(clean_path).contents.read()
+            file_content = w.files.download(clean_path).contents.read()
 
-        # Display image
-        img = Image.open(BytesIO(file_content))
-        st.image(img, caption=filename, use_container_width=True)
+            # Display image
+            img = Image.open(BytesIO(file_content))
+            st.image(img, caption=filename, use_container_width=True)
 
     except Exception as e:
         st.error(f"Failed to load image: {e}")
@@ -293,10 +291,68 @@ def save_feedback(feedback_df, radiologist_id):
 if 'reload_data' not in st.session_state:
     st.session_state.reload_data = False
 
+# Check if we need to load data
 if 'predictions_df' not in st.session_state or st.session_state.reload_data:
-    with st.spinner("Loading predictions from database..."):
-        st.session_state.predictions_df = get_predictions_for_review()
-        st.session_state.reload_data = False
+    # Show loading overlay with grayed-out skeleton table
+    loading_container = st.empty()
+
+    with loading_container.container():
+        # Create overlay effect with grayed-out skeleton table
+        st.markdown("""
+            <style>
+            .loading-overlay {
+                position: relative;
+                opacity: 0.3;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="loading-overlay">', unsafe_allow_html=True)
+
+        # Skeleton table
+        skeleton_df = pd.DataFrame({
+            'prediction_id': ['...', '...', '...', '...', '...'],
+            'ai_prediction': ['', '', '', '', ''],
+            'prediction_probability': [0.0, 0.0, 0.0, 0.0, 0.0],
+            'actual_diagnosis': ['', '', '', '', ''],
+            'predicted_at': ['', '', '', '', ''],
+            'image_link': ['', '', '', '', ''],
+            'radiologist_assessment': [None, None, None, None, None]
+        })
+
+        st.dataframe(
+            skeleton_df,
+            column_config={
+                "prediction_id": "Prediction ID",
+                "ai_prediction": "AI Diagnosis",
+                "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f"),
+                "actual_diagnosis": "Actual (Known)",
+                "predicted_at": "Timestamp",
+                "image_link": "Image",
+                "radiologist_assessment": "Radiologist's Assessment"
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Loading message overlay
+        st.markdown("""
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                        background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        font-size: 18px; font-weight: bold;">
+                Loading predictions...
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Load actual data
+    st.session_state.predictions_df = get_predictions_for_review()
+    st.session_state.reload_data = False
+
+    # Clear loading overlay
+    loading_container.empty()
+    st.rerun()
 
 predictions_df = st.session_state.predictions_df
 
