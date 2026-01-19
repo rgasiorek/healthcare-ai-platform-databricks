@@ -73,12 +73,12 @@ def get_predictions_for_review():
             CASE WHEN p.true_label = 1 THEN 'PNEUMONIA' ELSE 'NORMAL' END as actual_diagnosis,
             p.model_name,
             p.predicted_at,
-            -- Get image path from inference logs
-            logs.request AS image_request
+            -- Get image path from bronze table using image_id
+            bronze.file_path AS image_path
         FROM {PREDICTIONS_TABLE} p
         LEFT JOIN {FEEDBACK_TABLE} f ON p.prediction_id = f.prediction_id
-        LEFT JOIN healthcare_catalog_dev.gold.pneumonia_classifier_payload logs
-            ON p.prediction_id = logs.databricks_request_id
+        LEFT JOIN {CATALOG}.bronze.kaggle_xray_metadata bronze
+            ON p.image_id = bronze.image_id
         WHERE f.feedback_id IS NULL
         ORDER BY p.predicted_at DESC
         LIMIT 50
@@ -114,6 +114,10 @@ def save_feedback(feedback_df, radiologist_id):
     for _, row in feedback_df.iterrows():
         ai_prediction = row['ai_prediction']
         ground_truth = row['ground_truth']
+
+        # Skip rows where ground truth wasn't selected
+        if pd.isna(ground_truth) or ground_truth is None or ground_truth == '':
+            continue
 
         # Determine feedback type
         if ai_prediction == 'PNEUMONIA' and ground_truth == 'PNEUMONIA':
@@ -248,20 +252,8 @@ try:
         st.info("No predictions awaiting feedback. All caught up.")
         st.stop()
 
-    # Extract image path from JSON request
-    import json
-    def extract_image_path(request_json):
-        try:
-            if request_json:
-                req = json.loads(request_json)
-                return req.get('dataframe_records', [{}])[0].get('file_path', '')
-        except:
-            return ''
-
-    predictions_df['image_path'] = predictions_df['image_request'].apply(extract_image_path)
-
     # Prepare editable dataframe
-    predictions_df['ground_truth'] = predictions_df['actual_diagnosis']
+    predictions_df['ground_truth'] = None  # Start empty - radiologist must select
     predictions_df['notes'] = ''
 
     # Display readonly columns first, then editable ones
