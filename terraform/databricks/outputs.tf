@@ -71,13 +71,8 @@ output "warehouse_url" {
 }
 
 # Notebooks
-output "hello_world_notebook_path" {
-  value       = databricks_notebook.hello_world.path
-  description = "Path to Hello World notebook"
-}
-
 output "ingestion_notebook_path" {
-  value       = databricks_notebook.kaggle_ingestion.path
+  value       = databricks_notebook.ingest_kaggle_data.path
   description = "Path to Kaggle ingestion notebook"
 }
 

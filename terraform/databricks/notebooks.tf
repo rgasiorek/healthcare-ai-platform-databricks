@@ -1,21 +1,14 @@
 # Databricks Notebooks - Deployed via Terraform
 # Notebook source code stored in /notebooks/ directory
 
-# Hello World Notebook
-resource "databricks_notebook" "hello_world" {
-  path     = "/Shared/terraform-hello-world"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/00_utils/hello_world.py"
-}
-
 # Kaggle X-ray Data Ingestion Notebook
-resource "databricks_notebook" "kaggle_ingestion" {
+resource "databricks_notebook" "ingest_kaggle_data" {
   path     = "/Shared/ingest-kaggle-xray-data"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/01_ingestion/ingest_kaggle_xray_data.py"
 }
 
-# ML POC Training Notebook (TensorFlow)
+# ML POC Training Notebook (TensorFlow/Keras)
 resource "databricks_notebook" "train_poc_model" {
   path     = "/Shared/train-poc-model"
   language = "PYTHON"
@@ -29,61 +22,23 @@ resource "databricks_notebook" "train_poc_model_pytorch" {
   source   = "${path.module}/../../notebooks/03_ml/train_poc_model_pytorch.py"
 }
 
-# ML POC Serving Endpoint Notebook (Single Model)
-resource "databricks_notebook" "deploy_serving_endpoint" {
-  path     = "/Shared/deploy-serving-endpoint"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/03_ml/deploy_serving_endpoint.py"
-}
-
-# ML A/B Testing Endpoint (Champion/Challenger)
-resource "databricks_notebook" "deploy_ab_testing_endpoint" {
-  path     = "/Shared/deploy-ab-testing-endpoint"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/03_ml/deploy_ab_testing_endpoint.py"
-}
-
-# Wrap and Register Path-Based Models (Files API)
+# Wrap and Register Path-Based Models (Files API - for A/B testing)
 resource "databricks_notebook" "wrap_and_register_path_models" {
   path     = "/Shared/wrap_and_register_path_models"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/03_ml/wrap_and_register_path_models.py"
 }
 
-# ML Demo: SDK vs REST API Model Usage
+# ML Demo: SDK vs REST API Model Usage (Single Model Interaction)
 resource "databricks_notebook" "demo_model_usage" {
   path     = "/Shared/demo-model-usage"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/03_ml/demo_model_usage.py"
 }
 
-# Interactive Feedback Review (Radiologist Workflow)
-resource "databricks_notebook" "interactive_feedback_review" {
-  path     = "/Shared/interactive-feedback-review"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/04_feedback/interactive_feedback_review.py"
-}
-
-# Deploy Feedback REST Endpoint
-resource "databricks_notebook" "deploy_feedback_endpoint" {
-  path     = "/Shared/deploy-feedback-endpoint"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/04_feedback/deploy_feedback_endpoint.py"
-}
-
-# End-to-End Demo (30-minute workflow)
+# End-to-End Demo (Full A/B Testing Workflow)
 resource "databricks_notebook" "end_to_end_demo" {
   path     = "/Shared/end-to-end-demo"
   language = "PYTHON"
   source   = "${path.module}/../../notebooks/05_demo/end_to_end_demo.py"
 }
-
-# Generate Sample Predictions (Quick Test Data)
-resource "databricks_notebook" "generate_sample_predictions" {
-  path     = "/Shared/generate-sample-predictions"
-  language = "PYTHON"
-  source   = "${path.module}/../../notebooks/05_demo/generate_sample_predictions.py"
-}
-
-# Outputs
-
