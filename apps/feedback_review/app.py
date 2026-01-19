@@ -281,87 +281,59 @@ def save_feedback(feedback_df, radiologist_id):
     return len(records)
 
 
+# Initialize session state for predictions data
+if 'reload_data' not in st.session_state:
+    st.session_state.reload_data = False
+
+if 'predictions_df' not in st.session_state or st.session_state.reload_data:
+    with st.spinner("Loading predictions from database..."):
+        st.session_state.predictions_df = get_predictions_for_review()
+        st.session_state.reload_data = False
+
+predictions_df = st.session_state.predictions_df
+
 # Main app
 try:
     st.markdown("### Edit Feedback")
-    st.markdown("**Editable columns**: Ground Truth, Notes | **Image**: Click to view X-ray")
-
-    # Create placeholder/loading indicator
-    loading_placeholder = st.empty()
-    table_placeholder = st.empty()
-
-    # Show skeleton table with grayed-out placeholder rows
-    skeleton_df = pd.DataFrame({
-        'prediction_id': ['Loading...', 'Loading...', 'Loading...'],
-        'ai_prediction': ['', '', ''],
-        'prediction_probability': [0.0, 0.0, 0.0],
-        'actual_diagnosis': ['', '', ''],
-        'predicted_at': ['', '', ''],
-        'image_link': ['', '', ''],
-        'radiologist_assessment': [None, None, None]
-    })
-
-    # Show loading message
-    loading_placeholder.info("Loading predictions from database...")
-
-    # Show skeleton table (disabled)
-    with table_placeholder.container():
-        st.dataframe(
-            skeleton_df,
-            column_config={
-                "prediction_id": "Prediction ID",
-                "ai_prediction": "AI Diagnosis",
-                "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f"),
-                "actual_diagnosis": "Actual (Known)",
-                "predicted_at": "Timestamp",
-                "image_link": "Image",
-                "radiologist_assessment": "Radiologist's Assessment"
-            },
-            hide_index=True,
-            use_container_width=True
-        )
-
-    # Load actual data
-    predictions_df = get_predictions_for_review()
-
-    # Clear loading message
-    loading_placeholder.empty()
+    st.markdown("**Select Radiologist's Assessment for each prediction | Click image to view X-ray**")
 
     if predictions_df.empty:
-        table_placeholder.empty()
         st.info("No predictions awaiting feedback. All caught up.")
         st.stop()
 
-    # Prepare editable dataframe
-    predictions_df['radiologist_assessment'] = None  # Start empty - radiologist must select
+    # Prepare display dataframe (only once, store in session state)
+    if 'display_df' not in st.session_state:
+        df_copy = predictions_df.copy()
+        df_copy['radiologist_assessment'] = None  # Start empty - radiologist must select
 
-    # Create image viewer links with query parameters (only pass image_id, not full path)
-    predictions_df['image_link'] = predictions_df['image_id'].apply(
-        lambda x: f"?image={x}" if pd.notna(x) and x else None
-    )
+        # Create image viewer links with query parameters (only pass image_id, not full path)
+        df_copy['image_link'] = df_copy['image_id'].apply(
+            lambda x: f"?image={x}" if pd.notna(x) and x else None
+        )
 
-    # Display readonly columns first, then editable ones
-    display_df = predictions_df[[
-        'prediction_id',
-        'ai_prediction',
-        'prediction_probability',
-        'actual_diagnosis',
-        'predicted_at',
-        'image_link',
-        'radiologist_assessment'
-    ]].copy()
+        # Display readonly columns first, then editable ones
+        display_df = df_copy[[
+            'prediction_id',
+            'ai_prediction',
+            'prediction_probability',
+            'actual_diagnosis',
+            'predicted_at',
+            'image_link',
+            'radiologist_assessment'
+        ]].copy()
 
-    # Format for display
-    display_df['prediction_probability'] = display_df['prediction_probability'].round(3)
-    display_df['predicted_at'] = pd.to_datetime(display_df['predicted_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        # Format for display
+        display_df['prediction_probability'] = display_df['prediction_probability'].round(3)
+        display_df['predicted_at'] = pd.to_datetime(display_df['predicted_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        st.session_state.display_df = display_df
 
     # Show success message
     st.success(f"Found {len(predictions_df)} predictions awaiting feedback")
 
-    # Replace skeleton with actual editable table
-    with table_placeholder.container():
-        edited_df = st.data_editor(
-            display_df,
+    # Editable table
+    edited_df = st.data_editor(
+            st.session_state.display_df,
             column_config={
                 "prediction_id": st.column_config.TextColumn("Prediction ID", width="medium", disabled=True),
                 "ai_prediction": st.column_config.TextColumn("AI Diagnosis", width="small", disabled=True),
@@ -402,10 +374,14 @@ try:
                 submit_status.empty()
 
                 if count > 0:
-                    submit_status.success(f"Successfully submitted {count} feedback entries")
-                    st.info("Refresh the page to load new predictions")
+                    submit_status.success(f"Successfully submitted {count} feedback entries - reloading...")
+                    # Reload data to show new predictions
+                    st.session_state.reload_data = True
+                    if 'display_df' in st.session_state:
+                        del st.session_state.display_df
+                    st.rerun()
                 else:
-                    submit_status.warning("No feedback to submit")
+                    submit_status.warning("No feedback to submit - please select assessments first")
 
     # Show summary statistics
     st.markdown("---")
