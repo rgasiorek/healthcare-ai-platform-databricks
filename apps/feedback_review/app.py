@@ -39,6 +39,35 @@ st.set_page_config(
     layout="wide"
 )
 
+# Check if this is an image viewer request
+query_params = st.query_params
+if "image" in query_params:
+    # Image viewer mode
+    image_path = query_params["image"]
+
+    st.title("X-Ray Image Viewer")
+
+    # Add back button
+    if st.button("← Back to Feedback Table"):
+        st.query_params.clear()
+        st.rerun()
+
+    try:
+        # Convert dbfs path to /dbfs path for direct access
+        if image_path.startswith("dbfs:"):
+            local_path = image_path.replace("dbfs:", "/dbfs")
+        else:
+            local_path = f"/dbfs{image_path}"
+
+        # Display image
+        st.image(local_path, caption=image_path.split('/')[-1], use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Failed to load image: {e}")
+        st.code(f"Tried path: {local_path}")
+
+    st.stop()
+
 st.title("Radiologist Feedback Review")
 st.markdown("**Review AI predictions and provide ground truth diagnosis**")
 
@@ -215,8 +244,8 @@ try:
         'prediction_probability': [0.0, 0.0, 0.0],
         'actual_diagnosis': ['', '', ''],
         'predicted_at': ['', '', ''],
-        'image_path': ['', '', ''],
-        'ground_truth': ['PNEUMONIA', 'PNEUMONIA', 'PNEUMONIA'],
+        'image_link': ['', '', ''],
+        'ground_truth': [None, None, None],
         'notes': ['', '', '']
     })
 
@@ -233,7 +262,7 @@ try:
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f"),
                 "actual_diagnosis": "Actual (Known)",
                 "predicted_at": "Timestamp",
-                "image_path": "Image",
+                "image_link": "Image",
                 "ground_truth": "Ground Truth",
                 "notes": "Notes"
             },
@@ -256,6 +285,11 @@ try:
     predictions_df['ground_truth'] = None  # Start empty - radiologist must select
     predictions_df['notes'] = ''
 
+    # Create image viewer links with query parameters
+    predictions_df['image_link'] = predictions_df['image_path'].apply(
+        lambda x: f"?image={x}" if pd.notna(x) and x else None
+    )
+
     # Display readonly columns first, then editable ones
     display_df = predictions_df[[
         'prediction_id',
@@ -263,7 +297,7 @@ try:
         'prediction_probability',
         'actual_diagnosis',
         'predicted_at',
-        'image_path',
+        'image_link',
         'ground_truth',
         'notes'
     ]].copy()
@@ -285,12 +319,12 @@ try:
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f", width="small", disabled=True),
                 "actual_diagnosis": st.column_config.TextColumn("Actual (Known)", width="small", disabled=True),
                 "predicted_at": st.column_config.TextColumn("Timestamp", width="medium", disabled=True),
-                "image_path": st.column_config.LinkColumn("Image", width="medium", disabled=True, display_text="View X-ray"),
+                "image_link": st.column_config.LinkColumn("Image", width="medium", disabled=True, display_text="View X-ray"),
                 "ground_truth": st.column_config.SelectboxColumn(
                     "Ground Truth",
                     width="medium",
                     options=["PNEUMONIA", "NORMAL"],
-                    required=True
+                    required=False
                 ),
                 "notes": st.column_config.TextColumn("Notes", width="large")
             },
