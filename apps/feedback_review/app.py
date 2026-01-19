@@ -39,6 +39,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# Hide Streamlit default UI elements (hamburger menu, running indicator, etc.)
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {visibility: hidden;}
+    .stDecoration {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
 # Check if this is an image viewer request
 query_params = st.query_params
 if "image" in query_params:
