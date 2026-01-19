@@ -87,31 +87,34 @@ if "image" in query_params:
             image_path = result[0].file_path
             filename = result[0].filename
 
-        # Now load the image using the internal path
+        # Load the image using Files API (works both locally and in Databricks Apps)
+        from databricks.sdk import WorkspaceClient
+        from PIL import Image
+        from io import BytesIO
+
+        # Remove dbfs: prefix for Files API
+        clean_path = image_path.replace("dbfs:", "")
+
+        # Use Files API to download (with credentials for local mode)
         if IS_DATABRICKS:
-            # In Databricks Apps: Use Files API
-            from databricks.sdk import WorkspaceClient
-            from PIL import Image
-            from io import BytesIO
-
-            # Remove dbfs: prefix for Files API
-            clean_path = image_path.replace("dbfs:", "")
-
-            # Use Files API to download
+            # In Databricks Apps: use default auth
             w = WorkspaceClient()
-            file_content = w.files.download(clean_path).contents.read()
-
-            # Display image
-            img = Image.open(BytesIO(file_content))
-            st.image(img, caption=filename, use_container_width=True)
         else:
-            # Running locally: Use /dbfs path
-            if image_path.startswith("dbfs:"):
-                local_path = image_path.replace("dbfs:", "/dbfs")
-            else:
-                local_path = f"/dbfs{image_path}"
+            # Running locally: use credentials from secrets
+            # Extract workspace host from SQL warehouse hostname (e.g., "dbc-xxx.cloud.databricks.com")
+            sql_hostname = st.secrets["databricks"]["server_hostname"]
+            workspace_host = sql_hostname.split('/')[0] if '/' in sql_hostname else sql_hostname
 
-            st.image(local_path, caption=filename, use_container_width=True)
+            w = WorkspaceClient(
+                host=f"https://{workspace_host}",
+                token=st.secrets["databricks"]["access_token"]
+            )
+
+        file_content = w.files.download(clean_path).contents.read()
+
+        # Display image
+        img = Image.open(BytesIO(file_content))
+        st.image(img, caption=filename, use_container_width=True)
 
     except Exception as e:
         st.error(f"Failed to load image: {e}")
