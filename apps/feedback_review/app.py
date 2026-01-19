@@ -137,10 +137,18 @@ with st.sidebar:
     1. Review predictions in the table
     2. Click image link to view X-ray
     3. Select **Radiologist's Assessment** (PNEUMONIA or NORMAL)
-    4. Click "Submit All Feedback" when done
 
-    **Note**: Only rows with assessment selected will be saved
+    **Note**: Assessments are saved immediately to database
     """)
+
+    st.markdown("---")
+    if st.button("🔄 Load New Predictions", use_container_width=True):
+        st.session_state.reload_data = True
+        if 'display_df' in st.session_state:
+            del st.session_state.display_df
+        if 'previous_assessments' in st.session_state:
+            del st.session_state.previous_assessments
+        st.rerun()
 
 
 # Database connection helper
@@ -294,8 +302,8 @@ predictions_df = st.session_state.predictions_df
 
 # Main app
 try:
-    st.markdown("### Edit Feedback")
-    st.markdown("**Select Radiologist's Assessment for each prediction | Click image to view X-ray**")
+    st.markdown("### Review Predictions")
+    st.markdown("**Select assessment for each prediction - saved automatically | Click image to view X-ray**")
 
     if predictions_df.empty:
         st.info("No predictions awaiting feedback. All caught up.")
@@ -350,38 +358,98 @@ try:
             },
             hide_index=True,
             use_container_width=True,
-            num_rows="fixed"
+            num_rows="fixed",
+            key="predictions_editor"
         )
 
-    # Submit button
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Auto-save: detect changes and save immediately
+    if 'previous_assessments' not in st.session_state:
+        st.session_state.previous_assessments = {}
 
-    submit_status = st.empty()
+    # Check for new assessments
+    new_assessments = []
+    for idx, row in edited_df.iterrows():
+        assessment = row['radiologist_assessment']
+        pred_id = row['prediction_id']
 
-    with col2:
-        if st.button("Submit All Feedback", type="primary", use_container_width=True):
-            if not radiologist_id or radiologist_id.strip() == "":
-                submit_status.error("Please enter a Radiologist ID in the sidebar")
+        # If assessment was just selected (not null and different from before)
+        if pd.notna(assessment) and assessment != '' and st.session_state.previous_assessments.get(pred_id) != assessment:
+            new_assessments.append((idx, row))
+            st.session_state.previous_assessments[pred_id] = assessment
+
+    # Save new assessments immediately
+    if new_assessments and radiologist_id and radiologist_id.strip() != "":
+        for idx, row in new_assessments:
+            # Save single feedback entry
+            ai_prediction = row['ai_prediction']
+            radiologist_assessment = row['radiologist_assessment']
+
+            # Determine feedback type
+            if ai_prediction == 'PNEUMONIA' and radiologist_assessment == 'PNEUMONIA':
+                feedback_type = 'true-positive'
+            elif ai_prediction == 'PNEUMONIA' and radiologist_assessment == 'NORMAL':
+                feedback_type = 'false-positive'
+            elif ai_prediction == 'NORMAL' and radiologist_assessment == 'NORMAL':
+                feedback_type = 'true-negative'
+            elif ai_prediction == 'NORMAL' and radiologist_assessment == 'PNEUMONIA':
+                feedback_type = 'false-negative'
             else:
-                # Show saving message
-                submit_status.info("Saving feedback to database...")
+                continue
 
-                # Save feedback
-                count = save_feedback(edited_df, radiologist_id)
+            record = {
+                'feedback_id': f"fb-{uuid.uuid4().hex[:12]}",
+                'prediction_id': row['prediction_id'],
+                'timestamp': datetime.now().isoformat(),
+                'ground_truth': radiologist_assessment,
+                'feedback_type': feedback_type,
+                'radiologist_id': radiologist_id,
+                'confidence': 'confirmed',
+                'feedback_source': 'streamlit_app',
+                'notes': ''
+            }
 
-                # Clear saving message
-                submit_status.empty()
+            # Save to database
+            if USE_SQL_CONNECTOR:
+                connection = sql.connect(
+                    server_hostname=st.secrets["databricks"]["server_hostname"],
+                    http_path=st.secrets["databricks"]["http_path"],
+                    access_token=st.secrets["databricks"]["access_token"]
+                )
+                cursor = connection.cursor()
+                insert_sql = f"""
+                    INSERT INTO {FEEDBACK_TABLE} VALUES (
+                        '{record['feedback_id']}',
+                        '{record['prediction_id']}',
+                        '{record['timestamp']}',
+                        '{record['ground_truth']}',
+                        '{record['feedback_type']}',
+                        '{record['radiologist_id']}',
+                        '{record['confidence']}',
+                        '{record['feedback_source']}',
+                        '{record['notes']}'
+                    )
+                """
+                cursor.execute(insert_sql)
+                cursor.close()
+                connection.close()
+            else:
+                from pyspark.sql.types import StructType, StructField, StringType
+                schema = StructType([
+                    StructField("feedback_id", StringType(), True),
+                    StructField("prediction_id", StringType(), True),
+                    StructField("timestamp", StringType(), True),
+                    StructField("ground_truth", StringType(), True),
+                    StructField("feedback_type", StringType(), True),
+                    StructField("radiologist_id", StringType(), True),
+                    StructField("confidence", StringType(), True),
+                    StructField("feedback_source", StringType(), True),
+                    StructField("notes", StringType(), True)
+                ])
+                spark_feedback_df = spark.createDataFrame([record], schema=schema)
+                spark_feedback_df.write.mode('append').saveAsTable(FEEDBACK_TABLE)
 
-                if count > 0:
-                    submit_status.success(f"Successfully submitted {count} feedback entries - reloading...")
-                    # Reload data to show new predictions
-                    st.session_state.reload_data = True
-                    if 'display_df' in st.session_state:
-                        del st.session_state.display_df
-                    st.rerun()
-                else:
-                    submit_status.warning("No feedback to submit - please select assessments first")
+            # Show success toast
+            st.toast(f"✅ Saved assessment for {row['prediction_id'][:16]}...", icon="✅")
 
     # Show summary statistics
     st.markdown("---")
