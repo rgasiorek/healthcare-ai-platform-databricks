@@ -136,12 +136,10 @@ with st.sidebar:
     st.markdown("""
     1. Review predictions in the table
     2. Click image link to view X-ray
-    3. Edit the **editable columns**:
-       - Ground Truth
-       - Notes
+    3. Select **Radiologist's Assessment** (PNEUMONIA or NORMAL)
     4. Click "Submit All Feedback" when done
 
-    **Note**: Only highlighted columns are editable
+    **Note**: Only rows with assessment selected will be saved
     """)
 
 
@@ -197,20 +195,20 @@ def save_feedback(feedback_df, radiologist_id):
 
     for _, row in feedback_df.iterrows():
         ai_prediction = row['ai_prediction']
-        ground_truth = row['ground_truth']
+        radiologist_assessment = row['radiologist_assessment']
 
-        # Skip rows where ground truth wasn't selected
-        if pd.isna(ground_truth) or ground_truth is None or ground_truth == '':
+        # Skip rows where assessment wasn't selected
+        if pd.isna(radiologist_assessment) or radiologist_assessment is None or radiologist_assessment == '':
             continue
 
         # Determine feedback type
-        if ai_prediction == 'PNEUMONIA' and ground_truth == 'PNEUMONIA':
+        if ai_prediction == 'PNEUMONIA' and radiologist_assessment == 'PNEUMONIA':
             feedback_type = 'true-positive'
-        elif ai_prediction == 'PNEUMONIA' and ground_truth == 'NORMAL':
+        elif ai_prediction == 'PNEUMONIA' and radiologist_assessment == 'NORMAL':
             feedback_type = 'false-positive'
-        elif ai_prediction == 'NORMAL' and ground_truth == 'NORMAL':
+        elif ai_prediction == 'NORMAL' and radiologist_assessment == 'NORMAL':
             feedback_type = 'true-negative'
-        elif ai_prediction == 'NORMAL' and ground_truth == 'PNEUMONIA':
+        elif ai_prediction == 'NORMAL' and radiologist_assessment == 'PNEUMONIA':
             feedback_type = 'false-negative'
         else:
             continue
@@ -219,12 +217,12 @@ def save_feedback(feedback_df, radiologist_id):
             'feedback_id': f"fb-{uuid.uuid4().hex[:12]}",
             'prediction_id': row['prediction_id'],
             'timestamp': datetime.now().isoformat(),
-            'ground_truth': ground_truth,
+            'ground_truth': radiologist_assessment,
             'feedback_type': feedback_type,
             'radiologist_id': radiologist_id,
             'confidence': 'confirmed',  # Always confirmed for dashboard compatibility
             'feedback_source': 'streamlit_app',
-            'notes': row.get('notes', '')
+            'notes': ''  # No notes captured in UI
         }
         records.append(record)
 
@@ -300,8 +298,7 @@ try:
         'actual_diagnosis': ['', '', ''],
         'predicted_at': ['', '', ''],
         'image_link': ['', '', ''],
-        'ground_truth': [None, None, None],
-        'notes': ['', '', '']
+        'radiologist_assessment': [None, None, None]
     })
 
     # Show loading message
@@ -318,8 +315,7 @@ try:
                 "actual_diagnosis": "Actual (Known)",
                 "predicted_at": "Timestamp",
                 "image_link": "Image",
-                "ground_truth": "Ground Truth",
-                "notes": "Notes"
+                "radiologist_assessment": "Radiologist's Assessment"
             },
             hide_index=True,
             use_container_width=True
@@ -337,8 +333,7 @@ try:
         st.stop()
 
     # Prepare editable dataframe
-    predictions_df['ground_truth'] = None  # Start empty - radiologist must select
-    predictions_df['notes'] = ''
+    predictions_df['radiologist_assessment'] = None  # Start empty - radiologist must select
 
     # Create image viewer links with query parameters (only pass image_id, not full path)
     predictions_df['image_link'] = predictions_df['image_id'].apply(
@@ -353,8 +348,7 @@ try:
         'actual_diagnosis',
         'predicted_at',
         'image_link',
-        'ground_truth',
-        'notes'
+        'radiologist_assessment'
     ]].copy()
 
     # Format for display
@@ -375,13 +369,12 @@ try:
                 "actual_diagnosis": st.column_config.TextColumn("Actual (Known)", width="small", disabled=True),
                 "predicted_at": st.column_config.TextColumn("Timestamp", width="medium", disabled=True),
                 "image_link": st.column_config.LinkColumn("Image", width="medium", disabled=True, display_text="View X-ray"),
-                "ground_truth": st.column_config.SelectboxColumn(
-                    "Ground Truth",
+                "radiologist_assessment": st.column_config.SelectboxColumn(
+                    "Radiologist's Assessment",
                     width="medium",
                     options=["PNEUMONIA", "NORMAL"],
                     required=False
-                ),
-                "notes": st.column_config.TextColumn("Notes", width="large")
+                )
             },
             hide_index=True,
             use_container_width=True,
@@ -421,12 +414,18 @@ try:
     col1, col2 = st.columns(2)
 
     with col1:
-        matches = (edited_df['ai_prediction'] == edited_df['ground_truth']).sum()
-        st.metric("AI Matches Ground Truth", f"{matches}/{len(edited_df)}")
+        # Count assessments selected
+        assessed = edited_df['radiologist_assessment'].notna().sum()
+        st.metric("Assessments Selected", f"{assessed}/{len(edited_df)}")
 
     with col2:
-        has_notes = edited_df['notes'].str.len().gt(0).sum()
-        st.metric("With Notes", has_notes)
+        # Count matches between AI and radiologist (only for assessed rows)
+        assessed_df = edited_df[edited_df['radiologist_assessment'].notna()]
+        if len(assessed_df) > 0:
+            matches = (assessed_df['ai_prediction'] == assessed_df['radiologist_assessment']).sum()
+            st.metric("AI Matches Assessment", f"{matches}/{len(assessed_df)}")
+        else:
+            st.metric("AI Matches Assessment", "0/0")
 
 except Exception as e:
     st.error(f"Error: {str(e)}")
