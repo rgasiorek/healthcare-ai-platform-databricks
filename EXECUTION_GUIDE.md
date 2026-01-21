@@ -76,27 +76,48 @@ GROUP BY category;
 
 ---
 
-### Step 4: Deploy A/B Testing Endpoint (5-10 minutes)
-**What**: Create single endpoint serving both models with 50/50 traffic split
+### Step 4: Wrap and Register Path-Based Models (3-5 minutes)
+**What**: Wrap models to accept Unity Catalog file paths (Files API) instead of image bytes
 
 **Run**:
-1. Go to **Shared** → `deploy-ab-testing-endpoint`
+1. Go to **Shared** → `wrap_and_register_path_models`
 2. Attach to cluster: `healthcare-data-cluster-dev`
 3. Click **Run All**
-4. Wait ~5-10 minutes for endpoint to be READY
+4. Wait ~3-5 minutes
+
+**Verify**:
+- Check MLflow UI: **Machine Learning** → **Models** → Look for version 9 of both models
+
+**What you get**:
+- ✅ Keras model v9: Accepts `file_path` parameter
+- ✅ PyTorch model v9: Accepts `file_path` parameter
+- ✅ Models ready for deployment with Files API access
+
+---
+
+### Step 5: Deploy A/B Testing Endpoint (5-10 minutes)
+**What**: Deploy endpoint via Terraform serving both models with 50/50 traffic split
+
+**Run**:
+```bash
+cd terraform
+terraform apply
+```
 
 **Verify**:
 - Go to **Serving** → Check `pneumonia-classifier-ab-test`
 - Status should be **READY** (green)
+- Check environment variables: DATABRICKS_HOST and DATABRICKS_TOKEN should be set
 
 **What you get**:
 - ✅ REST API endpoint: `https://<workspace>/serving-endpoints/pneumonia-classifier-ab-test/invocations`
 - ✅ Traffic split: 50% Keras, 50% PyTorch
 - ✅ Inference logging enabled (auto_capture)
+- ✅ Environment variables configured for Files API access
 
 ---
 
-### Step 5: Make Predictions (2-3 minutes)
+### Step 6: Make Predictions (2-3 minutes)
 **What**: Test the A/B endpoint, generate predictions from both models
 
 **Run**:
@@ -117,77 +138,54 @@ GROUP BY category;
 
 ---
 
-### Step 6: Submit Feedback - Interactive Radiologist Review (2-3 minutes)
-**What**: Review predictions and submit ground truth feedback (like a real radiologist)
+### Step 7: Submit Feedback - Streamlit Review App (Interactive)
+**What**: Review predictions and submit ground truth feedback using interactive table interface
 
 **Run**:
-1. Go to **Shared** → `interactive-feedback-review`
-2. Attach to cluster: `healthcare-data-cluster-dev`
-3. Click **Run All**
-
-**What this notebook does**:
-- Loads recent predictions that don't have feedback yet
-- Shows AI prediction vs confidence
-- Allows you to submit ground truth diagnosis
-- Provides examples of:
-  - **True Positive**: AI said PNEUMONIA, radiologist confirms PNEUMONIA
-  - **False Positive**: AI said PNEUMONIA, radiologist says NORMAL
-  - **True Negative**: AI said NORMAL, radiologist confirms NORMAL
-  - **False Negative**: AI said NORMAL, radiologist says PNEUMONIA
-- Submits feedback to `prediction_feedback` table
-- Shows coverage statistics
-
-**Interactive Workflow**:
-```
-For each prediction:
-├─ View: Request ID, Model used, AI prediction, Confidence
-├─ Review: What AI said (NORMAL or PNEUMONIA)
-├─ Decide: What is the ground truth? (radiologist expertise)
-└─ Submit: Feedback automatically categorized (TP/FP/TN/FN)
+```bash
+cd apps/feedback_review
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-**Helper Function Included**:
-```python
-# Quick feedback submission
-quick_feedback(
-    request_id="abc-123",
-    ai_was_correct=True,
-    actual_diagnosis="PNEUMONIA"
-)
+**Or deploy to Databricks Apps**:
+```bash
+databricks apps deploy --source-path apps/feedback_review --name radiologist-feedback-review
+```
+
+**What the app does**:
+- Displays all predictions awaiting feedback in an editable table
+- **Auto-save**: Changes saved immediately when you select a radiologist assessment (no submit button)
+- **Image viewer**: Click prediction ID to view X-ray image
+- Shows AI prediction vs confidence vs actual diagnosis
+- Provides dropdown selectors for:
+  - **Radiologist's Assessment**: PNEUMONIA or NORMAL
+- Automatically categorizes feedback (TP/FP/TN/FN) based on AI prediction vs assessment
+- Saves to `gold.prediction_feedback` table
+
+**Workflow**:
+```
+1. Enter Radiologist ID in sidebar
+2. Review predictions in table (shows AI diagnosis, probability, actual category)
+3. Select assessment from dropdown for each prediction
+4. Feedback automatically saved to database
+5. Click prediction ID to view X-ray image if needed
+6. Reload page to see new predictions
 ```
 
 **What you get**:
 - ✅ Ground truth labels in `gold.prediction_feedback` table
-- ✅ Link between predictions and actual diagnoses
+- ✅ Link between predictions and actual diagnoses (via databricks-request-id)
 - ✅ Automatic categorization (true-positive, false-positive, etc.)
 - ✅ Feedback coverage statistics
-- ✅ Ready for monitoring dashboard analysis
+- ✅ Ready for dashboard analysis
 
 ---
 
-### Step 7: Monitor Performance (1-2 minutes)
-**What**: Run monitoring dashboard to compare Champion vs Challenger
+### Step 8: Monitor Performance via SQL Queries
+**What**: Query results in Databricks SQL Editor to compare Champion vs Challenger
 
-**Run**:
-1. Go to **Shared** → `monitor-ab-test`
-2. Attach to cluster: `healthcare-data-cluster-dev`
-3. Click **Run All**
-
-**What you get**:
-- ✅ **Traffic Distribution Chart**: See actual 50/50 split
-- ✅ **Feedback Coverage**: % of predictions with ground truth
-- ✅ **Accuracy Comparison**: Keras vs PyTorch performance
-- ✅ **Confusion Matrices**: TP/FP/TN/FN per model
-- ✅ **Daily Trends**: Performance over time
-- ✅ **Statistical Test**: Chi-square p-value
-- ✅ **Recommendation**: PROMOTE / KEEP TESTING / ROLLBACK
-
----
-
-### Step 8: Query Results in SQL Editor (BI Dashboard)
-**What**: See all results in Databricks SQL for BI dashboards
-
-**Run SQL Queries**:
+**Run SQL Queries in Databricks SQL Editor**:
 
 #### 8.1 - Traffic Distribution
 ```sql
@@ -310,72 +308,6 @@ At this point, you have:
 
 ---
 
-## Optional: Deploy Feedback REST Endpoint (Production-Ready)
-
-### Why REST Endpoint?
-
-The interactive notebook uses a Python SDK (`feedback_collector.py`), which works for demos but isn't production-ready.
-
-**For production**, you want a **REST endpoint** that:
-- Can be called from web/mobile apps (not just notebooks)
-- Has direct access to inference tables for validation
-- Auto-determines feedback_type based on prediction vs ground_truth
-- Provides consistent REST interface with model serving
-
-### Deploy Feedback Endpoint (5-10 minutes)
-
-**Run**:
-1. Go to **Shared** → `deploy-feedback-endpoint`
-2. Attach to cluster: `healthcare-data-cluster-dev`
-3. Click **Run All**
-4. Wait 5-10 minutes for endpoint to be READY
-
-**What you get**:
-```
-REST Endpoint: POST /serving-endpoints/feedback-endpoint/invocations
-
-Architecture:
-├─ Prediction: /serving-endpoints/pneumonia-classifier-ab-test/invocations
-└─ Feedback: /serving-endpoints/feedback-endpoint/invocations
-```
-
-**Usage from any application**:
-```bash
-curl -X POST \
-  https://your-workspace.databricks.com/serving-endpoints/feedback-endpoint/invocations \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dataframe_records": [{
-      "request_id": "abc-123",
-      "ground_truth": "PNEUMONIA",
-      "radiologist_id": "DR001",
-      "confidence": "confirmed",
-      "notes": "Confirmed diagnosis"
-    }]
-  }'
-```
-
-**Response**:
-```json
-{
-  "predictions": [{
-    "feedback_id": "feedback-12345678",
-    "status": "success",
-    "feedback_type": "true-positive",
-    "message": "Feedback submitted successfully"
-  }]
-}
-```
-
-**Benefits**:
-- ✅ Accessible from JavaScript/Swift/Java (any language)
-- ✅ Validates request_id exists before accepting feedback
-- ✅ Auto-calculates feedback_type (no manual TP/FP classification)
-- ✅ Same infrastructure as model serving (auto-scaling, monitoring)
-- ✅ Consistent REST interface
-
----
 
 ## Creating a BI Dashboard (Optional)
 

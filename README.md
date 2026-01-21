@@ -153,8 +153,10 @@ AWS Account (905418100642)
 | **Volume** | `xray_images` | External volume for JPEG files |
 | **Compute Cluster** | `healthcare-data-cluster-dev` | Python/ML workloads (2x i3.xlarge) |
 | **SQL Warehouse** | Serverless warehouse | SQL queries and BI dashboards |
-| **Notebooks** | 11 notebooks | Ingestion, training, deployment, feedback, demos |
-| **Jobs** | 2 Databricks Jobs | Model deployment automation |
+| **Notebooks** | 6 notebooks | Ingestion, training, model wrapping, demos |
+| **Jobs** | 1 Databricks Job | Automated Kaggle data ingestion |
+| **Model Endpoints** | 1 A/B testing endpoint | Champion vs Challenger with 50/50 traffic split |
+| **Streamlit App** | Feedback review app | Interactive radiologist feedback collection |
 
 ### File Structure
 
@@ -259,7 +261,9 @@ terraform apply
 - 5 Delta tables (bronze/silver/gold)
 - 1 Unity Catalog volume
 - 1 compute cluster + 1 SQL warehouse
-- 2 notebooks
+- 6 notebooks
+- 1 ingestion job
+- 1 model serving endpoint (A/B testing)
 
 **Deployment time:** ~5-7 minutes
 
@@ -374,19 +378,18 @@ To deploy to different environment: Update `variables.tf` → `environment = "pi
 
 ## Notebooks
 
+All notebooks are deployed via Terraform to `/Shared/` in Databricks workspace.
+
 | Notebook | Purpose | Location |
 |----------|---------|----------|
-| `hello_world` | Test notebook for Terraform deployment | `/notebooks/00_utils/` |
 | `ingest_kaggle_xray_data` | Download and ingest X-ray dataset from Kaggle | `/notebooks/01_ingestion/` |
-| `train_poc_model` | Train TensorFlow/Keras CNN model | `/notebooks/03_ml/` |
-| `train_poc_model_pytorch` | Train PyTorch CNN model | `/notebooks/03_ml/` |
-| `deploy_serving_endpoint` | Deploy single model serving endpoint | `/notebooks/03_ml/` |
-| `deploy_ab_testing_endpoint` | Deploy A/B testing endpoint (Keras vs PyTorch) | `/notebooks/03_ml/` |
+| `train_poc_model` | Train TensorFlow/Keras CNN model (Champion) | `/notebooks/03_ml/` |
+| `train_poc_model_pytorch` | Train PyTorch CNN model (Challenger) | `/notebooks/03_ml/` |
+| `wrap_and_register_path_models` | Wrap models for path-based inference (Files API) | `/notebooks/03_ml/` |
 | `demo_model_usage` | Demo SDK vs REST API for model inference | `/notebooks/03_ml/` |
-| `interactive_feedback_review` | Interactive feedback submission (Databricks widgets) | `/notebooks/04_feedback/` |
-| `deploy_feedback_endpoint` | Deploy feedback collection REST endpoint | `/notebooks/04_feedback/` |
-| `end_to_end_demo` | Complete 30-minute MLOps workflow demo | `/notebooks/05_demo/` |
-| `generate_sample_predictions` | Generate test predictions via A/B endpoint | `/notebooks/05_demo/` |
+| `end_to_end_demo` | Complete end-to-end A/B testing workflow demo | `/notebooks/05_demo/` |
+
+**Note**: Model serving endpoints are deployed via Terraform (`terraform/databricks/endpoints.tf`), not notebooks. See `DEPLOYMENT.md` for details.
 
 ## Feedback & Monitoring
 
@@ -401,12 +404,18 @@ streamlit run app.py
 ```
 
 **Features**:
-- Editable table interface with dropdown selectors
-- Real-time validation
-- Direct writes to `gold.prediction_feedback` table
-- Automatic feedback type calculation (TP/FP/TN/FN)
+- **Auto-save**: Changes saved immediately on selection (no submit button)
+- **Editable table**: Dropdown selectors for radiologist assessments
+- **Image viewer**: Click on prediction ID to view X-ray image
+- **Real-time validation**: Validates input before saving
+- **Direct database writes**: Saves to `gold.prediction_feedback` table
+- **Automatic categorization**: Calculates feedback type (TP/FP/TN/FN)
 
-**Configuration**: Set up Databricks connection in `.streamlit/secrets.toml` (see `secrets.toml.example`)
+**Deployment Options**:
+- **Option 1**: Run locally with `streamlit run app.py` (requires `.streamlit/secrets.toml`)
+- **Option 2**: Deploy to Databricks Apps with `databricks apps deploy` (recommended)
+
+See `apps/feedback_review/README.md` for full setup instructions.
 
 ### Model Comparison Dashboard
 
