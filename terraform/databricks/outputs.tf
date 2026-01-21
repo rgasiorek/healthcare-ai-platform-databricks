@@ -77,6 +77,16 @@ output "ingestion_notebook_path" {
 }
 
 # Model Serving Endpoints
+output "demo_endpoint_name" {
+  value       = databricks_model_serving.pneumonia_demo.name
+  description = "Simple demo endpoint name (for onboarding)"
+}
+
+output "demo_endpoint_url" {
+  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.pneumonia_demo.name}/invocations"
+  description = "Simple demo endpoint invocation URL"
+}
+
 output "ab_test_endpoint_name" {
   value       = databricks_model_serving.pneumonia_ab_test.name
   description = "A/B testing endpoint name"
