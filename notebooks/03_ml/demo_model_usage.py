@@ -37,7 +37,7 @@ import json
 # Configuration
 MODEL_NAME = "healthcare_catalog_dev.models.pneumonia_poc_classifier_remote_file"
 MODEL_VERSION = "9"  # Path-based model (Files API)
-ENDPOINT_NAME = "pneumonia-demo"
+ENDPOINT_NAME = "pneumonia-poc-classifier"  # Simple demo endpoint (not A/B testing)
 IMAGE_SIZE = 64  # Model was trained on 64x64 images
 
 print(f"Demo Configuration:")
