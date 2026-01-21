@@ -719,68 +719,32 @@ else:
 # MAGIC %md
 # MAGIC ## Step 2: Submitting Feedback (After Radiologist Review)
 # MAGIC
-# MAGIC Later, when a radiologist reviews the X-ray and provides ground truth, we submit feedback.
+# MAGIC After radiologists review X-rays and confirm diagnoses, feedback is collected through the **Streamlit Feedback Review App**.
+# MAGIC
+# MAGIC **Streamlit App**: [healthcare-ai-platform-databricks/apps/feedback_review](https://github.com/rgasiorek/healthcare-ai-platform-databricks/tree/main/apps/feedback_review)
+# MAGIC
+# MAGIC The app provides:
+# MAGIC - Interactive table with recent predictions
+# MAGIC - X-ray image viewer
+# MAGIC - Diagnosis confirmation (NORMAL/PNEUMONIA)
+# MAGIC - Confidence levels (confirmed/uncertain/needs_review)
+# MAGIC - Auto-save to `gold.prediction_feedback` table
+# MAGIC
+# MAGIC **Note**: In an ideal production setup, a dedicated **feedback endpoint** would exist where the app submits feedback via REST API. For now, the app writes directly to the database table.
 
 # COMMAND ----------
-# Install feedback collector (if not already available)
-import sys
-sys.path.append('/Workspace/Shared')
-
-# Import the feedback collector
-try:
-    from feedback_collector import submit_feedback
-    print("✅ Feedback collector loaded")
-except ImportError:
-    print("⚠️  Feedback collector not found. Upload it first using:")
-    print("   /tmp/upload_feedback_collector.py")
-
-# COMMAND ----------
-# Simulate: Radiologist reviews the X-ray and confirms diagnosis
-# In real app, this would happen hours/days later
-
-# Example 1: Model was CORRECT
-# request_id from earlier: 'abc-123-def-456'
-# Radiologist confirms: TRUE PNEUMONIA
-
-feedback_id_1 = submit_feedback(
-    prediction_id=request_id,  # The request_id we captured earlier
-    feedback_type="true-positive",  # Model said PNEUMONIA, it WAS pneumonia
-    radiologist_id="DR001",
-    confidence="confirmed",
-    feedback_source="expert_review",
-    notes="Clear consolidation in right lower lobe"
-)
-
-print(f"✅ Feedback submitted: {feedback_id_1}")
-print(f"   Prediction: {request_id} → Ground Truth: PNEUMONIA")
-
-# COMMAND ----------
-# Example 2: Model was WRONG (False Positive)
-# Make another prediction first
-img_array_2 = preprocess_image(test_samples[1].file_path, IMAGE_SIZE)
-response_2 = requests.post(
-    invocation_url,
-    headers={"Authorization": f"Bearer {token}"},
-    json={"inputs": [img_array_2.tolist()]}
-)
-
-if response_2.status_code == 200:
-    request_id_2 = response_2.headers.get('x-databricks-request-id')
-    pred_prob_2 = response_2.json()['predictions'][0][0]
-    pred_label_2 = "PNEUMONIA" if pred_prob_2 > 0.5 else "NORMAL"
-
-    print(f"Prediction 2: {pred_label_2} (request_id: {request_id_2})")
-
-    # Radiologist says: "Actually, this was NORMAL (false positive)"
-    if pred_label_2 == "PNEUMONIA":
-        feedback_id_2 = submit_feedback(
-            prediction_id=request_id_2,
-            feedback_type="false-positive",  # Model said PNEUMONIA, actually NORMAL
-            radiologist_id="DR001",
-            confidence="confirmed",
-            notes="Artifact from patient movement, not infection"
-        )
-        print(f"✅ Feedback (false positive): {feedback_id_2}")
+print("💡 Feedback is collected via the Streamlit app:")
+print("   App: https://github.com/rgasiorek/healthcare-ai-platform-databricks/tree/main/apps/feedback_review")
+print("   Data written to: healthcare_catalog_dev.gold.prediction_feedback")
+print()
+print("Example feedback record structure:")
+print({
+    "prediction_id": "abc-123-def-456",  # Links to request_id
+    "ground_truth": "PNEUMONIA",
+    "feedback_type": "true-positive",  # TP/FP/TN/FN
+    "radiologist_id": "DR001",
+    "confidence": "confirmed"
+})
 
 # COMMAND ----------
 # MAGIC %md
@@ -924,28 +888,30 @@ except Exception as e:
 # MAGIC %md
 # MAGIC ## Step 5: Practical Exercise for Pupils
 # MAGIC
-# MAGIC **Task**: Implement a complete feedback tracking system
+# MAGIC **Task**: Explore the complete feedback tracking system
 # MAGIC
 # MAGIC 1. **Make 10 predictions** via REST API
 # MAGIC    - Save all request_ids to a list
 # MAGIC    - Print predictions
 # MAGIC
-# MAGIC 2. **Simulate radiologist review**
-# MAGIC    - For each prediction, submit feedback
-# MAGIC    - Mix of correct (TP/TN) and incorrect (FP/FN)
+# MAGIC 2. **Submit feedback via Streamlit app**
+# MAGIC    - Use the Feedback Review app: [apps/feedback_review](https://github.com/rgasiorek/healthcare-ai-platform-databricks/tree/main/apps/feedback_review)
+# MAGIC    - Review predictions with X-ray images
+# MAGIC    - Confirm diagnoses (mix of correct TP/TN and incorrect FP/FN)
 # MAGIC
-# MAGIC 3. **Calculate model accuracy**
-# MAGIC    - Query the performance view
+# MAGIC 3. **Analyze results in BI Dashboard**
+# MAGIC    - View model performance metrics
+# MAGIC    - Compare Champion vs Challenger accuracy
+# MAGIC    - Explore prediction trends over time
+# MAGIC
+# MAGIC 4. **Calculate model accuracy**
+# MAGIC    - Query the performance view (shown in Step 4)
 # MAGIC    - Calculate: correct / total
-# MAGIC
-# MAGIC 4. **Visualize results**
-# MAGIC    - Create a confusion matrix
-# MAGIC    - Plot accuracy over time
 # MAGIC
 # MAGIC **Bonus Challenge**:
 # MAGIC - Build a simple function that takes a request_id and ground_truth
 # MAGIC - Automatically determines feedback_type (TP/FP/TN/FN)
-# MAGIC - Submits feedback with proper classification
+# MAGIC - Write directly to `gold.prediction_feedback` table
 # MAGIC
 # MAGIC **Discussion Questions**:
 # MAGIC - How long should we collect feedback before promoting a Challenger?
@@ -982,7 +948,8 @@ except Exception as e:
 # MAGIC
 # MAGIC 4. COLLECT FEEDBACK
 # MAGIC    └─► Radiologist reviews X-ray (hours/days later)
-# MAGIC        submit_feedback(request_id, "true-positive", ...)
+# MAGIC        Uses Streamlit Feedback Review app
+# MAGIC        Confirms diagnosis and submits feedback
 # MAGIC        Stored in prediction_feedback table
 # MAGIC
 # MAGIC 5. ANALYZE
