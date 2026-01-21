@@ -35,16 +35,15 @@ import requests
 import json
 
 # Configuration
-MODEL_NAME = "healthcare_catalog_dev.models.pneumonia_poc_classifier_remote_file"
-MODEL_VERSION = "9"  # Path-based model (Files API)
-ENDPOINT_NAME = "pneumonia-poc-classifier"  # Simple demo endpoint (not A/B testing)
+MODEL_NAME = "healthcare_catalog_dev.models.pneumonia_poc_classifier"
+MODEL_VERSION = "1"  # Original model (image arrays)
+ENDPOINT_NAME = "pneumonia-poc-classifier"
 IMAGE_SIZE = 64  # Model was trained on 64x64 images
 
 print(f"Demo Configuration:")
 print(f"  Model: {MODEL_NAME}")
 print(f"  Version: {MODEL_VERSION}")
 print(f"  Endpoint: {ENDPOINT_NAME}")
-print(f"\n📝 Note: Using v9 path-based models (Files API)")
 
 # COMMAND ----------
 # MAGIC %md
@@ -71,15 +70,37 @@ for i, sample in enumerate(test_samples):
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Note: Path-Based Models (v9)
+# MAGIC ## Helper Function: Preprocess Images
 # MAGIC
-# MAGIC V9 models use **Files API** and accept Unity Catalog file paths instead of image arrays.
-# MAGIC
-# MAGIC **Input Format**:
-# MAGIC - Old (v1): numpy array of image pixels
-# MAGIC - New (v9): `{"file_path": "/Volumes/catalog/schema/volume/image.jpeg"}`
-# MAGIC
-# MAGIC **Advantage**: No need to load/preprocess images - model does it internally using WorkspaceClient
+# MAGIC Both approaches need the same preprocessing (resize, normalize)
+
+# COMMAND ----------
+def preprocess_image(file_path, image_size=64):
+    """
+    Load and preprocess image for model input
+
+    Args:
+        file_path: Path to image file (dbfs:/Volumes/...)
+        image_size: Target size for resizing (default: 64)
+
+    Returns:
+        numpy array of shape (image_size, image_size, 3) normalized to [0, 1]
+    """
+    # Unity Catalog volumes: remove dbfs: prefix
+    local_path = file_path.replace("dbfs:", "")
+
+    # Load and preprocess
+    img = Image.open(local_path)
+    img = img.convert('RGB')
+    img = img.resize((image_size, image_size))
+    img_array = np.array(img) / 255.0
+
+    return img_array
+
+# Test preprocessing on first image
+test_img = preprocess_image(test_samples[0].file_path, IMAGE_SIZE)
+print(f"✅ Preprocessed image shape: {test_img.shape}")
+print(f"   Value range: [{test_img.min():.3f}, {test_img.max():.3f}]")
 
 # COMMAND ----------
 # MAGIC %md
@@ -109,12 +130,12 @@ for i, sample in enumerate(test_samples):
 print(f"Loading model from MLflow Model Registry...")
 print(f"  Model URI: models:/{MODEL_NAME}/{MODEL_VERSION}")
 
-# Load the PyFunc model (v9 is a custom wrapper)
-model_sdk = mlflow.pyfunc.load_model(f"models:/{MODEL_NAME}/{MODEL_VERSION}")
+# Load the model
+model_sdk = mlflow.keras.load_model(f"models:/{MODEL_NAME}/{MODEL_VERSION}")
 
 print(f"✅ Model loaded successfully!")
-print(f"   Type: {type(model_sdk)}")
-print(f"   Metadata: {model_sdk.metadata}")
+print(f"\nModel Summary:")
+model_sdk.summary()
 
 # COMMAND ----------
 # MAGIC %md
@@ -125,41 +146,35 @@ print("=" * 80)
 print("APPROACH 1: MLflow SDK - Batch Predictions")
 print("=" * 80)
 
-# Prepare batch of file paths (v9 models accept paths, not arrays)
-import pandas as pd
-
-batch_data = pd.DataFrame([
-    {"file_path": s.file_path} for s in test_samples
-])
+# Prepare batch of images
+batch_images = np.array([preprocess_image(s.file_path, IMAGE_SIZE) for s in test_samples])
 batch_labels = [s.category for s in test_samples]
 
-print(f"\nBatch size: {len(batch_data)} images")
-print(f"Input format: file_path (Unity Catalog volumes)")
+print(f"\nBatch shape: {batch_images.shape}")
+print(f"Number of images: {len(batch_images)}")
 
 # Measure prediction time
 start_time = time.time()
 
-# Run batch prediction with file paths
-predictions_sdk = model_sdk.predict(batch_data)
+# Run batch prediction (all at once!)
+predictions_sdk = model_sdk.predict(batch_images, verbose=0)
 
 sdk_duration = time.time() - start_time
 
 # Display results
 print(f"\n⏱️  Total prediction time: {sdk_duration:.3f} seconds")
-print(f"   Time per image: {sdk_duration/len(batch_data):.3f} seconds")
+print(f"   Time per image: {sdk_duration/len(batch_images):.3f} seconds")
 print(f"\nPredictions:")
 print("-" * 80)
 
-for i, (sample, pred) in enumerate(zip(test_samples, predictions_sdk)):
-    # v9 model returns dict with 'prediction' and 'probability'
-    pred_label = pred['prediction']
-    pred_prob = pred['probability']
-    confidence = pred_prob if pred_label == "PNEUMONIA" else (1 - pred_prob)
+for i, (sample, pred_prob) in enumerate(zip(test_samples, predictions_sdk)):
+    pred_label = "PNEUMONIA" if pred_prob[0] > 0.5 else "NORMAL"
+    confidence = max(pred_prob[0], 1 - pred_prob[0])
     match = "✅" if pred_label == sample.category else "❌"
 
     print(f"{match} Image {i+1}: {sample.filename}")
     print(f"   True: {sample.category:<10} | Predicted: {pred_label:<10} | Confidence: {confidence:.1%}")
-    print(f"   P(PNEUMONIA): {pred_prob:.3f}")
+    print(f"   P(PNEUMONIA): {pred_prob[0]:.3f}")
     print()
 
 # COMMAND ----------
@@ -249,10 +264,9 @@ invocation_url = f"https://{workspace_url}/serving-endpoints/{ENDPOINT_NAME}/inv
 print("Warming up endpoint (handling cold start)...")
 print("This may take 30-60 seconds on first request...\n")
 
-# Warm-up request with file_path (v9 model format)
-warm_payload = {
-    "inputs": [{"file_path": test_samples[0].file_path}]
-}
+# Warm-up request with image array
+warm_img = preprocess_image(test_samples[0].file_path, IMAGE_SIZE)
+warm_payload = {"inputs": [warm_img.tolist()]}
 
 try:
     warm_start = time.time()
@@ -267,7 +281,7 @@ try:
     if warm_response.status_code == 200:
         print(f"✅ Endpoint warmed up successfully!")
         print(f"   Cold start time: {warm_duration:.1f} seconds")
-        print(f"\nNow endpoint is warm - subsequent requests will be fast (~1-2s)\n")
+        print(f"\nNow endpoint is warm - subsequent requests will be fast (~0.1-0.2s)\n")
     else:
         print(f"⚠️  Warm-up got status {warm_response.status_code}")
         print(f"   Response: {warm_response.text}")
@@ -297,9 +311,12 @@ print("Predictions:")
 print("-" * 80)
 
 for i, sample in enumerate(test_samples):
-    # Prepare API payload with file_path (v9 model format)
+    # Preprocess image
+    img_array = preprocess_image(sample.file_path, IMAGE_SIZE)
+
+    # Prepare API payload (image array)
     payload = {
-        "inputs": [{"file_path": sample.file_path}]
+        "inputs": [img_array.tolist()]
     }
 
     # Measure individual request time
@@ -318,12 +335,11 @@ for i, sample in enumerate(test_samples):
 
         if response.status_code == 200:
             result = response.json()
-            # v9 model returns dict with 'prediction' and 'probability'
-            pred = result.get('predictions', [{}])[0]
-            pred_label = pred['prediction']
-            pred_prob = pred['probability']
+            prediction = result.get('predictions', [[]])[0]
+            pred_prob = prediction[0] if isinstance(prediction, list) else prediction
 
-            confidence = pred_prob if pred_label == "PNEUMONIA" else (1 - pred_prob)
+            pred_label = "PNEUMONIA" if pred_prob > 0.5 else "NORMAL"
+            confidence = max(pred_prob, 1 - pred_prob)
             match = "✅" if pred_label == sample.category else "❌"
 
             api_predictions.append(pred_prob)
