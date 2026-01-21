@@ -67,17 +67,65 @@ print(f"  Kaggle User: {kaggle_username}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 4: Download Dataset from Kaggle
+# MAGIC ## Step 4: Check if Re-ingestion is Needed
 
 # COMMAND ----------
+from datetime import datetime, timezone
 import kaggle
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-# Authenticate and download
+# Authenticate
 api = KaggleApi()
 api.authenticate()
 
-print(f"Downloading dataset: {DATASET_NAME}")
+# Get source dataset metadata (lightweight API call)
+print(f"🔍 Checking if re-ingestion is needed...")
+dataset_meta = api.dataset_metadata(DATASET_NAME)
+source_updated_at = datetime.strptime(
+    dataset_meta.lastUpdated,
+    '%Y-%m-%dT%H:%M:%SZ'
+).replace(tzinfo=timezone.utc)
+
+print(f"\n📊 Source Dataset Info:")
+print(f"   Last Updated: {source_updated_at}")
+print(f"   Download Count: {dataset_meta.downloadCount}")
+
+# Get max ingested_at from sink (bronze table)
+try:
+    sink_max_ingested = spark.sql(f"""
+        SELECT MAX(ingested_at) as max_ingested
+        FROM {CATALOG}.{SCHEMA_BRONZE}.kaggle_xray_metadata
+    """).collect()[0]['max_ingested']
+
+    if sink_max_ingested:
+        # Convert to UTC for comparison
+        sink_max_ingested = sink_max_ingested.replace(tzinfo=timezone.utc)
+        print(f"\n📦 Sink Table Info:")
+        print(f"   Last Ingested: {sink_max_ingested}")
+
+        # Compare timestamps
+        if source_updated_at <= sink_max_ingested:
+            print(f"\n✅ Data is up-to-date. No ingestion needed.")
+            print(f"   Source: {source_updated_at}")
+            print(f"   Sink:   {sink_max_ingested}")
+            dbutils.notebook.exit("SKIPPED: Data already up-to-date")
+        else:
+            print(f"\n⚠️  Source has newer data. Proceeding with full re-ingestion.")
+            print(f"   Source: {source_updated_at}")
+            print(f"   Sink:   {sink_max_ingested}")
+    else:
+        print(f"\n🆕 No existing data. Proceeding with initial ingestion.")
+
+except Exception as e:
+    # Table doesn't exist or is empty - first ingestion
+    print(f"\n🆕 Bronze table is empty or doesn't exist. Proceeding with initial ingestion.")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Step 5: Download Dataset from Kaggle
+
+# COMMAND ----------
+print(f"📥 Downloading dataset: {DATASET_NAME}")
 print(f"This may take several minutes...")
 
 # Download to temp location
@@ -91,7 +139,7 @@ print("Download complete!")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 5: Explore Downloaded Files
+# MAGIC ## Step 6: Explore Downloaded Files
 
 # COMMAND ----------
 # List downloaded files using Python standard library
@@ -108,7 +156,7 @@ else:
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 6: Organize and Copy Files to Unity Catalog Volume (Sample)
+# MAGIC ## Step 7: Organize and Copy Files to Unity Catalog Volume (Sample)
 
 # COMMAND ----------
 import shutil
@@ -164,7 +212,7 @@ print(f"\nTotal images copied: {normal_count + pneumonia_count}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 7: Create Metadata and Load into Bronze Delta Lake Table
+# MAGIC ## Step 8: Create Metadata and Load into Bronze Delta Lake Table
 
 # COMMAND ----------
 from pyspark.sql.types import StructType, StructField, StringType, LongType, TimestampType
@@ -214,21 +262,72 @@ bronze_df = spark.createDataFrame(bronze_records)
 display(bronze_df.limit(10))
 
 # COMMAND ----------
-# Write to Bronze table (using Unity Catalog three-level namespace)
+# Write to Bronze table using MERGE (preserves existing data, adds new)
 bronze_table = f"{CATALOG}.{SCHEMA_BRONZE}.kaggle_xray_metadata"
 
-bronze_df.write \
-    .format("delta") \
-    .mode("append") \
-    .saveAsTable(bronze_table)
+# Create temp view for new data
+bronze_df.createOrReplaceTempView("new_bronze_data")
 
-print(f"✅ Metadata written to {bronze_table}")
-print(f"   Records: {len(bronze_records)}")
+# Check if table exists (for first run)
+table_exists = spark.catalog.tableExists(bronze_table)
+
+if not table_exists:
+    # First ingestion - create table with INSERT
+    print(f"🆕 Creating new table: {bronze_table}")
+    bronze_df.write \
+        .format("delta") \
+        .mode("overwrite") \
+        .saveAsTable(bronze_table)
+    print(f"✅ Initial data written to {bronze_table}")
+    print(f"   Records: {len(bronze_records)}")
+else:
+    # Subsequent ingestion - MERGE to preserve existing data
+    print(f"🔄 Merging data into existing table: {bronze_table}")
+
+    merge_result = spark.sql(f"""
+        MERGE INTO {bronze_table} as target
+        USING new_bronze_data as source
+        ON target.image_id = source.image_id
+        WHEN MATCHED THEN
+            UPDATE SET
+                filename = source.filename,
+                category = source.category,
+                dataset_split = source.dataset_split,
+                file_path = source.file_path,
+                file_size_bytes = source.file_size_bytes,
+                ingested_at = source.ingested_at,
+                ingestion_batch_id = source.ingestion_batch_id
+        WHEN NOT MATCHED THEN
+            INSERT (
+                image_id,
+                filename,
+                category,
+                dataset_split,
+                file_path,
+                file_size_bytes,
+                ingested_at,
+                ingestion_batch_id
+            )
+            VALUES (
+                source.image_id,
+                source.filename,
+                source.category,
+                source.dataset_split,
+                source.file_path,
+                source.file_size_bytes,
+                source.ingested_at,
+                source.ingestion_batch_id
+            )
+    """)
+
+    print(f"✅ Data merged into {bronze_table}")
+    print(f"   Records processed: {len(bronze_records)}")
+
 print(f"   Batch ID: {BATCH_ID}")
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Step 8: Validation and Summary
+# MAGIC ## Step 9: Validation and Summary
 
 # COMMAND ----------
 # Query the bronze data we just loaded
