@@ -169,7 +169,6 @@ def get_predictions_for_review():
             p.image_id,
             CASE WHEN p.predicted_label = 1 THEN 'PNEUMONIA' ELSE 'NORMAL' END as ai_prediction,
             p.prediction_probability,
-            CASE WHEN p.true_label = 1 THEN 'PNEUMONIA' ELSE 'NORMAL' END as actual_diagnosis,
             p.model_name,
             p.predicted_at,
             -- Get image path from bronze table using image_id
@@ -325,7 +324,6 @@ if 'predictions_df' not in st.session_state or st.session_state.reload_data:
             'prediction_id': ['...', '...', '...', '...', '...'],
             'ai_prediction': ['', '', '', '', ''],
             'prediction_probability': [0.0, 0.0, 0.0, 0.0, 0.0],
-            'actual_diagnosis': ['', '', '', '', ''],
             'predicted_at': ['', '', '', '', ''],
             'image_link': ['', '', '', '', ''],
             'radiologist_assessment': [None, None, None, None, None]
@@ -337,7 +335,6 @@ if 'predictions_df' not in st.session_state or st.session_state.reload_data:
                 "prediction_id": "Prediction ID",
                 "ai_prediction": "AI Diagnosis",
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f"),
-                "actual_diagnosis": "Actual (Known)",
                 "predicted_at": "Timestamp",
                 "image_link": "Image",
                 "radiologist_assessment": "Radiologist's Assessment"
@@ -391,7 +388,6 @@ try:
             'prediction_id',
             'ai_prediction',
             'prediction_probability',
-            'actual_diagnosis',
             'predicted_at',
             'image_link',
             'radiologist_assessment'
@@ -413,7 +409,6 @@ try:
                 "prediction_id": st.column_config.TextColumn("Prediction ID", width="medium", disabled=True),
                 "ai_prediction": st.column_config.TextColumn("AI Diagnosis", width="small", disabled=True),
                 "prediction_probability": st.column_config.NumberColumn("Probability", format="%.3f", width="small", disabled=True),
-                "actual_diagnosis": st.column_config.TextColumn("Actual (Known)", width="small", disabled=True),
                 "predicted_at": st.column_config.TextColumn("Timestamp", width="medium", disabled=True),
                 "image_link": st.column_config.LinkColumn("Image", width="medium", disabled=True, display_text="View X-ray"),
                 "radiologist_assessment": st.column_config.SelectboxColumn(

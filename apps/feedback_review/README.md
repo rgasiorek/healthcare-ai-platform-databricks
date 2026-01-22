@@ -6,51 +6,12 @@ Interactive Streamlit app for reviewing AI pneumonia predictions and submitting 
 
 - ✅ **Auto-save**: Changes saved **immediately** when you select a radiologist assessment (no submit button)
 - ✅ **Editable Table**: Edit "Radiologist's Assessment" directly in the table via dropdown
-- ✅ **Image Viewer**: Click on prediction ID to view the X-ray image in a new view
-- ✅ **Read-only columns**: Prediction ID, AI diagnosis, probability, actual category
+- ✅ **Image Viewer**: Click "View X-ray" link to see the X-ray image
 - ✅ **Validation**: Dropdown selectors (PNEUMONIA/NORMAL)
 - ✅ **Session state caching**: Table doesn't reload on every interaction
 - ✅ **Summary stats**: See total predictions and feedback coverage
 
-## Deployment Options
-
-You have **two options** to run this app:
-
-### **Option 1: Databricks Apps** (Recommended - runs in Databricks workspace)
-
-Databricks Apps lets you deploy Streamlit apps directly in your workspace (like Snowflake Streamlit).
-
-**Requirements:**
-- Databricks workspace with Apps enabled (available in most regions)
-- Databricks CLI configured
-
-**Deploy:**
-
-```bash
-# Navigate to app directory
-cd apps/feedback_review
-
-# Deploy to Databricks
-databricks apps deploy --source-path . --name radiologist-feedback-review
-
-# Get the app URL
-databricks apps list
-```
-
-The app will be available at:
-```
-https://<your-workspace>.cloud.databricks.com/apps/radiologist-feedback-review
-```
-
-**Benefits:**
-- ✅ Runs inside Databricks (no external hosting)
-- ✅ Authenticated automatically
-- ✅ Direct Spark access to tables
-- ✅ No secrets management needed
-
----
-
-### **Option 2: Local Streamlit** (runs on your laptop)
+## Deployment
 
 Run the app locally on your machine and connect to Databricks remotely.
 
@@ -79,32 +40,27 @@ streamlit run app.py
 
 The app will open at http://localhost:8501
 
-**Benefits:**
-- ✅ No Databricks Apps needed
-- ✅ Run on your laptop
-- ✅ Easy to customize and test
-
 ---
 
 ## Usage
 
 1. **Set Radiologist ID**: Enter your ID in the sidebar (e.g., "DR001")
 2. **Review predictions**: See all predictions awaiting feedback in the table
-3. **Select assessment**: Click dropdown in "Radiologist's Assessment" column and select PNEUMONIA or NORMAL
-4. **Auto-save**: Feedback is **immediately saved** to the database when you make a selection (you'll see a green toast notification)
-5. **View X-ray**: Click on a prediction ID to view the X-ray image in a separate view
-6. **Refresh**: Reload page to see new predictions (already-reviewed items won't show up again)
+3. **View X-ray**: Click "View X-ray" link to see the image in a separate view
+4. **Select assessment**: Click dropdown in "Radiologist's Assessment" column and select PNEUMONIA or NORMAL
+5. **Auto-save**: Feedback is **immediately saved** to the database when you make a selection (you'll see a green toast notification)
+6. **Refresh**: Click "Load New Predictions" button to see new predictions (already-reviewed items won't show up again)
 
 ## Screenshots
 
 **Main Interface:**
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ Prediction ID (link)  │ AI Diagnosis │ Prob  │ Actual  │ Radiologist's Assessment │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│ 1234-5678-9abc...     │ PNEUMONIA    │ 0.892 │ PNEUMO  │ [Select... ▼]           │
-│ abcd-efgh-1234...     │ NORMAL       │ 0.234 │ NORMAL  │ [Select... ▼]           │
-└──────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Prediction ID  │ AI Diagnosis │ Prob  │ Image      │ Radiologist's Assessment │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 1234-5678...   │ PNEUMONIA    │ 0.892 │ View X-ray │ [Select... ▼]           │
+│ abcd-efgh...   │ NORMAL       │ 0.234 │ View X-ray │ [Select... ▼]           │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Auto-save workflow**:
@@ -127,44 +83,35 @@ Edit `app.py` to customize:
 
 ## Troubleshooting
 
-**Databricks Apps:**
-- Check if Apps is enabled: `databricks apps list`
-- View logs: `databricks apps logs radiologist-feedback-review`
-- Redeploy: `databricks apps deploy --source-path . --name radiologist-feedback-review --force`
-
-**Local Streamlit:**
-- Connection errors: Verify SQL warehouse is running
-- Authentication errors: Regenerate access token
-- Missing data: Check table names in `app.py`
+- **Connection errors**: Verify SQL warehouse is running in Databricks workspace
+- **Authentication errors**: Regenerate access token from User Settings > Access Tokens
+- **Missing data**: Check table names in `app.py` match your catalog name
+- **Image loading issues**: Verify WorkspaceClient has access to Unity Catalog volumes
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Streamlit App                                                │
+│  Streamlit App (Local)                                        │
 │  ┌──────────────┬─────────────────┬──────────────────────┐   │
 │  │ Auto-save    │ Session State   │ Image Viewer         │   │
 │  │ Detection    │ Cache           │ (Files API)          │   │
 │  └──────────────┴─────────────────┴──────────────────────┘   │
 └──────┬───────────────────────────────────────────────────────┘
        │
-       ├─ Option 1: Direct Spark (Databricks Apps)
-       │            ↓
-       │       [Unity Catalog Tables]
-       │            - gold.pneumonia_classifier_predictions
-       │            - gold.prediction_feedback
-       │            - bronze.kaggle_xray_metadata
-       │
-       └─ Option 2: SQL Connector (Local)
-                    ↓
-              [SQL Warehouse]
-                    ↓
-              [Unity Catalog Tables]
+       │ SQL Connector
+       ↓
+  [SQL Warehouse]
+       ↓
+  [Unity Catalog Tables]
+       - gold.pneumonia_predictions
+       - gold.prediction_feedback
+       - bronze.kaggle_xray_metadata
 
 **Key Features**:
 - Auto-save: Detects new selections via session state tracking
 - Image viewer: Looks up file_path from bronze table using image_id (security)
-- Files API: Loads images using WorkspaceClient (works in both local and Databricks Apps)
+- Files API: Loads images using WorkspaceClient with credentials from secrets
 ```
 
 ## Implementation Highlights
