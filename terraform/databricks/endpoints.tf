@@ -80,6 +80,14 @@ resource "databricks_model_serving" "pneumonia_ab_test" {
     }
   }
 
+  # Ignore environment variable changes - managed manually via Databricks CLI
+  lifecycle {
+    ignore_changes = [
+      config[0].served_entities[0].environment_vars,
+      config[0].served_entities[1].environment_vars
+    ]
+  }
+
   # Dependencies: Models must be registered in MLflow first
   # Note: Terraform can't check if MLflow models exist, so this will fail
   # on first apply if models aren't registered yet. Run training notebooks first.
