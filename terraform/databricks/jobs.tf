@@ -31,9 +31,9 @@ resource "databricks_job" "kaggle_xray_ingestion" {
 
     # Job cluster configuration (ephemeral, cost-effective)
     new_cluster {
-      spark_version      = "15.4.x-scala2.12"  # Latest LTS
-      node_type_id       = "i3.xlarge"
-      num_workers        = 0  # Single-node (sufficient for data ingestion)
+      spark_version = "15.4.x-scala2.12" # Latest LTS
+      node_type_id  = "i3.xlarge"
+      num_workers   = 0 # Single-node (sufficient for data ingestion)
 
       # Enable Unity Catalog
       data_security_mode = "SINGLE_USER"
@@ -52,7 +52,7 @@ resource "databricks_job" "kaggle_xray_ingestion" {
     # Retry configuration
     max_retries               = 1
     timeout_seconds           = 3600  # 1 hour max
-    min_retry_interval_millis = 60000  # Wait 1 min before retry
+    min_retry_interval_millis = 60000 # Wait 1 min before retry
   }
 
   # Tags for organization

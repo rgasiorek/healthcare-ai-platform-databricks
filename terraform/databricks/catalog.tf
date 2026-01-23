@@ -22,13 +22,13 @@ resource "databricks_metastore" "healthcare" {
   storage_root_credential_id = databricks_storage_credential.unity_catalog_metastore.storage_credential_id
   owner                      = "account users"
   region                     = data.aws_region.current.name
-  force_destroy              = true  # For dev environment
+  force_destroy              = true # For dev environment
 }
 
 # Assign metastore to workspace
 resource "databricks_metastore_assignment" "workspace" {
   metastore_id = databricks_metastore.healthcare.id
-  workspace_id = "3720263199172428"  # Your workspace ID from earlier
+  workspace_id = "3720263199172428" # Your workspace ID from earlier
 }
 
 # Storage Credential for Healthcare Data Lake
@@ -37,7 +37,7 @@ resource "databricks_storage_credential" "healthcare_data" {
   aws_iam_role {
     role_arn = var.data_access_iam_role_arn
   }
-  comment = "Storage credential for healthcare data lake S3 bucket (${var.environment})"
+  comment    = "Storage credential for healthcare data lake S3 bucket (${var.environment})"
   depends_on = [databricks_metastore_assignment.workspace]
 }
 
@@ -70,9 +70,9 @@ resource "databricks_external_location" "gold" {
 
 # Healthcare Catalog
 resource "databricks_catalog" "healthcare" {
-  metastore_id    = databricks_metastore.healthcare.id
-  name            = "healthcare_catalog_${var.environment}"
-  comment         = "Healthcare X-ray pneumonia analysis catalog with Unity Catalog governance (${var.environment})"
+  metastore_id = databricks_metastore.healthcare.id
+  name         = "healthcare_catalog_${var.environment}"
+  comment      = "Healthcare X-ray pneumonia analysis catalog with Unity Catalog governance (${var.environment})"
   properties = {
     purpose     = "healthcare-ai"
     domain      = "medical-imaging"
@@ -127,12 +127,12 @@ resource "databricks_schema" "models" {
 
 # Volume for X-ray images in Bronze layer
 resource "databricks_volume" "xray_images" {
-  catalog_name = databricks_catalog.healthcare.name
-  schema_name  = databricks_schema.bronze.name
-  name         = "xray_images"
-  volume_type  = "EXTERNAL"
+  catalog_name     = databricks_catalog.healthcare.name
+  schema_name      = databricks_schema.bronze.name
+  name             = "xray_images"
+  volume_type      = "EXTERNAL"
   storage_location = "${databricks_external_location.bronze.url}/xray_images"
-  comment      = "External volume for raw X-ray image files from Kaggle"
+  comment          = "External volume for raw X-ray image files from Kaggle"
 }
 
 # Outputs

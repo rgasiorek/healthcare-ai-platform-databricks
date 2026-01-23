@@ -3,7 +3,7 @@
 # Configured for Unity Catalog with single-user access mode
 resource "databricks_cluster" "healthcare_compute" {
   cluster_name            = "healthcare-data-cluster-${var.environment}"
-  spark_version           = "15.4.x-scala2.12"  # Latest LTS with Unity Catalog support
+  spark_version           = "15.4.x-scala2.12" # Latest LTS with Unity Catalog support
   node_type_id            = "i3.xlarge"
   autotermination_minutes = 20
   num_workers             = 2

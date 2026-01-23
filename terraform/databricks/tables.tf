@@ -16,51 +16,51 @@ resource "databricks_sql_table" "bronze_kaggle_metadata" {
   comment = "Raw X-ray image metadata from Kaggle Pneumonia dataset"
 
   column {
-    name     = "image_id"
-    type     = "STRING"
-    comment  = "Unique identifier for X-ray image"
+    name    = "image_id"
+    type    = "STRING"
+    comment = "Unique identifier for X-ray image"
   }
 
   column {
-    name     = "filename"
-    type     = "STRING"
-    comment  = "Original filename from Kaggle"
+    name    = "filename"
+    type    = "STRING"
+    comment = "Original filename from Kaggle"
   }
 
   column {
-    name     = "category"
-    type     = "STRING"
-    comment  = "Image category: NORMAL or PNEUMONIA"
+    name    = "category"
+    type    = "STRING"
+    comment = "Image category: NORMAL or PNEUMONIA"
   }
 
   column {
-    name     = "dataset_split"
-    type     = "STRING"
-    comment  = "train, test, or val split"
+    name    = "dataset_split"
+    type    = "STRING"
+    comment = "train, test, or val split"
   }
 
   column {
-    name     = "file_path"
-    type     = "STRING"
-    comment  = "Path to image file in volume"
+    name    = "file_path"
+    type    = "STRING"
+    comment = "Path to image file in volume"
   }
 
   column {
-    name     = "file_size_bytes"
-    type     = "BIGINT"
-    comment  = "File size in bytes"
+    name    = "file_size_bytes"
+    type    = "BIGINT"
+    comment = "File size in bytes"
   }
 
   column {
-    name     = "ingested_at"
-    type     = "TIMESTAMP"
-    comment  = "Timestamp when data was ingested"
+    name    = "ingested_at"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when data was ingested"
   }
 
   column {
-    name     = "ingestion_batch_id"
-    type     = "STRING"
-    comment  = "Batch ID for tracking ingestion runs"
+    name    = "ingestion_batch_id"
+    type    = "STRING"
+    comment = "Batch ID for tracking ingestion runs"
   }
 
   properties = {
@@ -87,63 +87,63 @@ resource "databricks_sql_table" "silver_xray_metadata" {
   comment = "X-ray metadata with validation and quality checks (silver layer)"
 
   column {
-    name     = "image_id"
-    type     = "STRING"
-    comment  = "Unique identifier for X-ray image"
+    name    = "image_id"
+    type    = "STRING"
+    comment = "Unique identifier for X-ray image"
   }
 
   column {
-    name     = "label"
-    type     = "INT"
-    comment  = "Binary label: 0=NORMAL, 1=PNEUMONIA"
+    name    = "label"
+    type    = "INT"
+    comment = "Binary label: 0=NORMAL, 1=PNEUMONIA"
   }
 
   column {
-    name     = "label_name"
-    type     = "STRING"
-    comment  = "Human-readable label"
+    name    = "label_name"
+    type    = "STRING"
+    comment = "Human-readable label"
   }
 
   column {
-    name     = "dataset_split"
-    type     = "STRING"
-    comment  = "train, test, or val split"
+    name    = "dataset_split"
+    type    = "STRING"
+    comment = "train, test, or val split"
   }
 
   column {
-    name     = "file_path"
-    type     = "STRING"
-    comment  = "Validated path to image file"
+    name    = "file_path"
+    type    = "STRING"
+    comment = "Validated path to image file"
   }
 
   column {
-    name     = "image_width"
-    type     = "INT"
-    comment  = "Image width in pixels"
+    name    = "image_width"
+    type    = "INT"
+    comment = "Image width in pixels"
   }
 
   column {
-    name     = "image_height"
-    type     = "INT"
-    comment  = "Image height in pixels"
+    name    = "image_height"
+    type    = "INT"
+    comment = "Image height in pixels"
   }
 
   column {
-    name     = "quality_score"
-    type     = "DOUBLE"
-    comment  = "Image quality score (0-1)"
+    name    = "quality_score"
+    type    = "DOUBLE"
+    comment = "Image quality score (0-1)"
   }
 
   column {
-    name     = "processed_at"
-    type     = "TIMESTAMP"
-    comment  = "Timestamp when data was processed"
+    name    = "processed_at"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when data was processed"
   }
 
   column {
-    name     = "source_batch_id"
-    type     = "STRING"
-    comment  = "Reference to bronze batch ID"
+    name    = "source_batch_id"
+    type    = "STRING"
+    comment = "Reference to bronze batch ID"
   }
 
   properties = {
@@ -168,39 +168,39 @@ resource "databricks_sql_table" "silver_image_features" {
   comment = "Extracted features from X-ray images for ML training"
 
   column {
-    name     = "image_id"
-    type     = "STRING"
-    comment  = "Foreign key to silver.xray_metadata"
+    name    = "image_id"
+    type    = "STRING"
+    comment = "Foreign key to silver.xray_metadata"
   }
 
   column {
-    name     = "feature_vector"
-    type     = "ARRAY<DOUBLE>"
-    comment  = "Extracted feature vector from CNN"
+    name    = "feature_vector"
+    type    = "ARRAY<DOUBLE>"
+    comment = "Extracted feature vector from CNN"
   }
 
   column {
-    name     = "feature_extraction_model"
-    type     = "STRING"
-    comment  = "Name/version of feature extraction model"
+    name    = "feature_extraction_model"
+    type    = "STRING"
+    comment = "Name/version of feature extraction model"
   }
 
   column {
-    name     = "mean_pixel_value"
-    type     = "DOUBLE"
-    comment  = "Mean pixel intensity"
+    name    = "mean_pixel_value"
+    type    = "DOUBLE"
+    comment = "Mean pixel intensity"
   }
 
   column {
-    name     = "std_pixel_value"
-    type     = "DOUBLE"
-    comment  = "Standard deviation of pixel intensity"
+    name    = "std_pixel_value"
+    type    = "DOUBLE"
+    comment = "Standard deviation of pixel intensity"
   }
 
   column {
-    name     = "extracted_at"
-    type     = "TIMESTAMP"
-    comment  = "Timestamp when features were extracted"
+    name    = "extracted_at"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when features were extracted"
   }
 
   properties = {
@@ -225,69 +225,69 @@ resource "databricks_sql_table" "gold_predictions" {
   comment = "ML model predictions for pneumonia classification"
 
   column {
-    name     = "prediction_id"
-    type     = "STRING"
-    comment  = "Unique identifier for prediction"
+    name    = "prediction_id"
+    type    = "STRING"
+    comment = "Unique identifier for prediction"
   }
 
   column {
-    name     = "image_id"
-    type     = "STRING"
-    comment  = "Foreign key to silver.xray_metadata"
+    name    = "image_id"
+    type    = "STRING"
+    comment = "Foreign key to silver.xray_metadata"
   }
 
   column {
-    name     = "predicted_label"
-    type     = "INT"
-    comment  = "Predicted label: 0=NORMAL, 1=PNEUMONIA"
+    name    = "predicted_label"
+    type    = "INT"
+    comment = "Predicted label: 0=NORMAL, 1=PNEUMONIA"
   }
 
   column {
-    name     = "prediction_probability"
-    type     = "DOUBLE"
-    comment  = "Probability of pneumonia (0-1)"
+    name    = "prediction_probability"
+    type    = "DOUBLE"
+    comment = "Probability of pneumonia (0-1)"
   }
 
   column {
-    name     = "confidence_score"
-    type     = "DOUBLE"
-    comment  = "Model confidence in prediction (0-1)"
+    name    = "confidence_score"
+    type    = "DOUBLE"
+    comment = "Model confidence in prediction (0-1)"
   }
 
   column {
-    name     = "true_label"
-    type     = "INT"
-    comment  = "Actual label for validation"
+    name    = "true_label"
+    type    = "INT"
+    comment = "Actual label for validation"
   }
 
   column {
-    name     = "is_correct"
-    type     = "BOOLEAN"
-    comment  = "Whether prediction matches true label"
+    name    = "is_correct"
+    type    = "BOOLEAN"
+    comment = "Whether prediction matches true label"
   }
 
   column {
-    name     = "model_name"
-    type     = "STRING"
-    comment  = "Name of ML model used"
+    name    = "model_name"
+    type    = "STRING"
+    comment = "Name of ML model used"
   }
 
   column {
-    name     = "model_version"
-    type     = "STRING"
-    comment  = "Version of ML model"
+    name    = "model_version"
+    type    = "STRING"
+    comment = "Version of ML model"
   }
 
   column {
-    name     = "predicted_at"
-    type     = "TIMESTAMP"
-    comment  = "Timestamp when prediction was made"
+    name    = "predicted_at"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when prediction was made"
   }
 
   column {
-    name     = "prediction_date"
-    type     = "DATE"
-    comment  = "Date partition for predictions"
+    name    = "prediction_date"
+    type    = "DATE"
+    comment = "Date partition for predictions"
   }
 
   properties = {
@@ -310,81 +310,81 @@ resource "databricks_sql_table" "gold_model_performance" {
   comment = "Model performance metrics and evaluation results"
 
   column {
-    name     = "evaluation_id"
-    type     = "STRING"
-    comment  = "Unique identifier for evaluation run"
+    name    = "evaluation_id"
+    type    = "STRING"
+    comment = "Unique identifier for evaluation run"
   }
 
   column {
-    name     = "model_name"
-    type     = "STRING"
-    comment  = "Name of ML model"
+    name    = "model_name"
+    type    = "STRING"
+    comment = "Name of ML model"
   }
 
   column {
-    name     = "model_version"
-    type     = "STRING"
-    comment  = "Version of ML model"
+    name    = "model_version"
+    type    = "STRING"
+    comment = "Version of ML model"
   }
 
   column {
-    name     = "dataset_split"
-    type     = "STRING"
-    comment  = "Dataset used: train, test, or val"
+    name    = "dataset_split"
+    type    = "STRING"
+    comment = "Dataset used: train, test, or val"
   }
 
   column {
-    name     = "accuracy"
-    type     = "DOUBLE"
-    comment  = "Overall accuracy"
+    name    = "accuracy"
+    type    = "DOUBLE"
+    comment = "Overall accuracy"
   }
 
   column {
-    name     = "precision"
-    type     = "DOUBLE"
-    comment  = "Precision score"
+    name    = "precision"
+    type    = "DOUBLE"
+    comment = "Precision score"
   }
 
   column {
-    name     = "recall"
-    type     = "DOUBLE"
-    comment  = "Recall score"
+    name    = "recall"
+    type    = "DOUBLE"
+    comment = "Recall score"
   }
 
   column {
-    name     = "f1_score"
-    type     = "DOUBLE"
-    comment  = "F1 score"
+    name    = "f1_score"
+    type    = "DOUBLE"
+    comment = "F1 score"
   }
 
   column {
-    name     = "auc_roc"
-    type     = "DOUBLE"
-    comment  = "Area under ROC curve"
+    name    = "auc_roc"
+    type    = "DOUBLE"
+    comment = "Area under ROC curve"
   }
 
   column {
-    name     = "confusion_matrix"
-    type     = "STRING"
-    comment  = "Confusion matrix as JSON"
+    name    = "confusion_matrix"
+    type    = "STRING"
+    comment = "Confusion matrix as JSON"
   }
 
   column {
-    name     = "total_samples"
-    type     = "BIGINT"
-    comment  = "Total number of samples evaluated"
+    name    = "total_samples"
+    type    = "BIGINT"
+    comment = "Total number of samples evaluated"
   }
 
   column {
-    name     = "evaluated_at"
-    type     = "TIMESTAMP"
-    comment  = "Timestamp when evaluation was run"
+    name    = "evaluated_at"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when evaluation was run"
   }
 
   column {
-    name     = "evaluation_date"
-    type     = "DATE"
-    comment  = "Date partition for evaluations"
+    name    = "evaluation_date"
+    type    = "DATE"
+    comment = "Date partition for evaluations"
   }
 
   properties = {
@@ -398,10 +398,10 @@ resource "databricks_sql_table" "gold_model_performance" {
 # Gold Layer: Prediction Feedback Table
 # Stores ground truth labels from radiologists for model predictions
 resource "databricks_sql_table" "gold_prediction_feedback" {
-  catalog_name = databricks_catalog.healthcare.name
-  schema_name  = databricks_schema.gold.name
-  name         = "prediction_feedback"
-  table_type   = "EXTERNAL"
+  catalog_name       = databricks_catalog.healthcare.name
+  schema_name        = databricks_schema.gold.name
+  name               = "prediction_feedback"
+  table_type         = "EXTERNAL"
   data_source_format = "DELTA"
   storage_location   = "${databricks_external_location.gold.url}/prediction_feedback"
 
@@ -436,33 +436,33 @@ resource "databricks_sql_table" "gold_prediction_feedback" {
   }
 
   column {
-    name     = "feedback_type"
-    type     = "STRING"
-    comment  = "Classification: true-positive, false-positive, true-negative, false-negative"
+    name    = "feedback_type"
+    type    = "STRING"
+    comment = "Classification: true-positive, false-positive, true-negative, false-negative"
   }
 
   column {
-    name     = "radiologist_id"
-    type     = "STRING"
-    comment  = "ID of radiologist providing feedback"
+    name    = "radiologist_id"
+    type    = "STRING"
+    comment = "ID of radiologist providing feedback"
   }
 
   column {
-    name     = "confidence"
-    type     = "STRING"
-    comment  = "Confidence level: confirmed, uncertain, needs_review"
+    name    = "confidence"
+    type    = "STRING"
+    comment = "Confidence level: confirmed, uncertain, needs_review"
   }
 
   column {
-    name     = "feedback_source"
-    type     = "STRING"
-    comment  = "How feedback was collected: api, radiologist, pathology, manual"
+    name    = "feedback_source"
+    type    = "STRING"
+    comment = "How feedback was collected: api, radiologist, pathology, manual"
   }
 
   column {
-    name     = "notes"
-    type     = "STRING"
-    comment  = "Optional notes from radiologist"
+    name    = "notes"
+    type    = "STRING"
+    comment = "Optional notes from radiologist"
   }
 
   properties = {
