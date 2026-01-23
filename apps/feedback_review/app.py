@@ -38,18 +38,17 @@ FEEDBACK_TABLE = f"{CATALOG}.gold.prediction_feedback"
 def get_databricks_credentials():
     """
     Get Databricks credentials:
-    - Databricks Apps: Uses default auth (service principal), reads from secrets for SQL warehouse path
+    - Databricks Apps: Auto-detects from DATABRICKS_HOST, uses default auth
     - Local: Uses secrets.toml
     """
-    # Check if running in Databricks Apps environment
-    is_databricks_app = os.getenv("DATABRICKS_RUNTIME_VERSION") is None and os.getenv("DB_IS_DRIVER") is not None
+    # Check if running in Databricks Apps (DATABRICKS_HOST env var is set by Databricks Apps)
+    databricks_host = os.getenv("DATABRICKS_HOST")
 
-    if is_databricks_app:
-        # Databricks Apps: use default authentication (no token needed)
-        # SQL warehouse info from environment or default
-        server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME", "dbc-68a1cdfa-43b8.cloud.databricks.com")
+    if databricks_host:
+        # Databricks Apps: auto-detect workspace hostname
+        server_hostname = databricks_host.replace("https://", "")
         http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044")
-        access_token = None  # Will use default auth
+        access_token = None  # Will use default service principal auth
     else:
         # Local: use secrets
         server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
