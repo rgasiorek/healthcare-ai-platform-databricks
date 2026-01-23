@@ -11,6 +11,19 @@ import uuid
 # Detect environment and choose connection method
 import os
 
+# Version info - update this with each deployment
+APP_VERSION = "2026-01-23T15:10:08Z"  # ISO timestamp of last deployment
+
+# Try to get git commit hash if available
+try:
+    import subprocess
+    git_hash = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
+                                      stderr=subprocess.DEVNULL,
+                                      cwd=os.path.dirname(__file__)).decode('utf-8').strip()
+    APP_VERSION = f"{APP_VERSION} ({git_hash})"
+except:
+    pass  # Git not available or not in a repo
+
 # Detect environment
 IS_DATABRICKS_APPS = os.getenv("DATABRICKS_HOST") is not None
 IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
@@ -37,19 +50,6 @@ else:
     except ImportError:
         st.error("❌ databricks-sql-connector not installed. Run: pip install databricks-sql-connector")
         st.stop()
-
-# Version info - update this with each deployment
-APP_VERSION = "2026-01-23T15:08:00Z"  # ISO timestamp of last deployment
-
-# Try to get git commit hash if available
-try:
-    import subprocess
-    git_hash = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
-                                      stderr=subprocess.DEVNULL,
-                                      cwd=os.path.dirname(__file__)).decode('utf-8').strip()
-    APP_VERSION = f"{APP_VERSION} ({git_hash})"
-except:
-    pass  # Git not available or not in a repo
 
 # Configuration
 CATALOG = "healthcare_catalog_dev"
