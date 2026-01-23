@@ -259,7 +259,7 @@ with st.sidebar:
     """)
 
     st.markdown("---")
-    if st.button("🔄 Load New Predictions", use_container_width=True):
+    if st.button("🔄 Load New Predictions"):
         st.session_state.reload_data = True
         if 'display_df' in st.session_state:
             del st.session_state.display_df
@@ -436,8 +436,7 @@ if 'predictions_df' not in st.session_state or st.session_state.reload_data:
                 "image_link": "Image",
                 "radiologist_assessment": "Radiologist's Assessment"
             },
-            hide_index=True,
-            use_container_width=True
+            hide_index=True
         )
 
         st.markdown('</div>', unsafe_allow_html=True)
@@ -519,7 +518,6 @@ try:
                 )
             },
             hide_index=True,
-            use_container_width=True,
             num_rows="fixed",
             key="predictions_editor"
         )
