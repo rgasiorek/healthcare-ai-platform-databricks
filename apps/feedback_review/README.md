@@ -11,7 +11,45 @@ Interactive Streamlit app for reviewing AI pneumonia predictions and submitting 
 - ✅ **Session state caching**: Table doesn't reload on every interaction
 - ✅ **Summary stats**: See total predictions and feedback coverage
 
-## Deployment
+## Deployment Options
+
+### Option 1: Databricks Apps (Recommended - runs in workspace)
+
+Deploy the app directly in your Databricks workspace via UI.
+
+**Requirements:**
+- Databricks workspace with Apps enabled
+- Appropriate permissions to create apps
+
+**Steps:**
+
+1. **Prepare app files**: Ensure you have these files in `apps/feedback_review/`:
+   - `app.py` (main app)
+   - `requirements.txt` (dependencies)
+   - `app.yaml` (Databricks Apps config)
+
+2. **Deploy via Databricks UI**:
+   - Navigate to **Workspace** → **Apps** in Databricks UI
+   - Click **Create App**
+   - Name: `radiologist-feedback-review`
+   - Upload the entire `apps/feedback_review` directory
+   - Databricks will read `app.yaml` and install dependencies from `requirements.txt`
+   - Wait for app to deploy (~2-3 minutes)
+
+3. **Access the app**:
+   - URL will be: `https://<workspace>.cloud.databricks.com/apps/radiologist-feedback-review`
+   - App runs with workspace authentication automatically
+   - Uses Spark directly to access tables (no secrets needed)
+
+**Benefits:**
+- ✅ Runs inside Databricks (no external hosting)
+- ✅ Authenticated automatically via workspace
+- ✅ Direct Spark access to tables
+- ✅ No secrets management needed
+
+---
+
+### Option 2: Local Streamlit (runs on your laptop)
 
 Run the app locally on your machine and connect to Databricks remotely.
 
@@ -83,14 +121,38 @@ Edit `app.py` to customize:
 
 ## Troubleshooting
 
+**Databricks Apps:**
+- **App won't start**: Check logs in Apps UI → Click on app → View Logs
+- **Import errors**: Verify all dependencies are in `requirements.txt`
+- **Table access errors**: Ensure app has permissions to read `gold.pneumonia_predictions` and `gold.prediction_feedback`
+- **Image loading issues**: Verify workspace has access to Unity Catalog volumes
+
+**Local Streamlit:**
 - **Connection errors**: Verify SQL warehouse is running in Databricks workspace
 - **Authentication errors**: Regenerate access token from User Settings > Access Tokens
-- **Missing data**: Check table names in `app.py` match your catalog name
-- **Image loading issues**: Verify WorkspaceClient has access to Unity Catalog volumes
+- **Missing data**: Check table names in `app.py` match your catalog name (default: `healthcare_catalog_dev`)
+- **Image loading issues**: Verify WorkspaceClient credentials in `secrets.toml` have access to Unity Catalog volumes
 
 ## Architecture
 
 ```
+Option 1: Databricks Apps (in workspace)
+┌──────────────────────────────────────────────────────────────┐
+│  Streamlit App (Databricks Apps)                              │
+│  ┌──────────────┬─────────────────┬──────────────────────┐   │
+│  │ Auto-save    │ Session State   │ Image Viewer         │   │
+│  │ Detection    │ Cache           │ (Files API)          │   │
+│  └──────────────┴─────────────────┴──────────────────────┘   │
+└──────┬───────────────────────────────────────────────────────┘
+       │
+       │ Direct Spark (in workspace)
+       ↓
+  [Unity Catalog Tables]
+       - gold.pneumonia_predictions
+       - gold.prediction_feedback
+       - bronze.kaggle_xray_metadata
+
+Option 2: Local Streamlit (on laptop)
 ┌──────────────────────────────────────────────────────────────┐
 │  Streamlit App (Local)                                        │
 │  ┌──────────────┬─────────────────┬──────────────────────┐   │
@@ -99,19 +161,17 @@ Edit `app.py` to customize:
 │  └──────────────┴─────────────────┴──────────────────────┘   │
 └──────┬───────────────────────────────────────────────────────┘
        │
-       │ SQL Connector
+       │ SQL Connector (remote)
        ↓
   [SQL Warehouse]
        ↓
   [Unity Catalog Tables]
-       - gold.pneumonia_predictions
-       - gold.prediction_feedback
-       - bronze.kaggle_xray_metadata
 
 **Key Features**:
 - Auto-save: Detects new selections via session state tracking
 - Image viewer: Looks up file_path from bronze table using image_id (security)
-- Files API: Loads images using WorkspaceClient with credentials from secrets
+- Dual-mode: Auto-detects Databricks vs local environment
+- Files API: Loads images using WorkspaceClient (works in both modes)
 ```
 
 ## Implementation Highlights
