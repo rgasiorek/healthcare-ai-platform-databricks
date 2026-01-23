@@ -9,7 +9,7 @@
 
 # Warehouse Permissions - Allow app to use SQL warehouse
 resource "databricks_permissions" "feedback_app_warehouse" {
-  sql_warehouse_id = databricks_sql_endpoint.healthcare_warehouse.id
+  sql_endpoint_id = databricks_sql_endpoint.healthcare_warehouse.id
 
   access_control {
     service_principal_name = "f2a69ee5-e2d8-490b-a551-fa91155e53ed"
@@ -57,9 +57,9 @@ resource "databricks_grants" "feedback_app_prediction_feedback_table" {
   }
 }
 
-# Pneumonia Predictions Table Grants - Allow app to SELECT
-resource "databricks_grants" "feedback_app_pneumonia_predictions_table" {
-  table = "${databricks_catalog.healthcare.name}.${databricks_schema.gold.name}.${databricks_sql_table.gold_pneumonia_predictions.name}"
+# Gold Predictions Table Grants - Allow app to SELECT
+resource "databricks_grants" "feedback_app_gold_predictions_table" {
+  table = "${databricks_catalog.healthcare.name}.${databricks_schema.gold.name}.${databricks_sql_table.gold_predictions.name}"
 
   grant {
     principal  = "f2a69ee5-e2d8-490b-a551-fa91155e53ed"
@@ -67,9 +67,9 @@ resource "databricks_grants" "feedback_app_pneumonia_predictions_table" {
   }
 }
 
-# X-ray Metadata Table Grants - Allow app to SELECT (for image paths)
-resource "databricks_grants" "feedback_app_xray_metadata_table" {
-  table = "${databricks_catalog.healthcare.name}.${databricks_schema.bronze.name}.${databricks_sql_table.bronze_kaggle_xray_metadata.name}"
+# Bronze Kaggle Metadata Table Grants - Allow app to SELECT (for image paths)
+resource "databricks_grants" "feedback_app_bronze_metadata_table" {
+  table = "${databricks_catalog.healthcare.name}.${databricks_schema.bronze.name}.${databricks_sql_table.bronze_kaggle_metadata.name}"
 
   grant {
     principal  = "f2a69ee5-e2d8-490b-a551-fa91155e53ed"
