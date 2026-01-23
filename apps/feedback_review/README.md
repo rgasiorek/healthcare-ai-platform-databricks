@@ -28,19 +28,24 @@ Deploy the app directly in your Databricks workspace.
    - Navigate to **Compute** → **Apps**
    - Click **Create custom app**
    - Name: `radiologist-feedback-review`
-   - The UI will show deployment instructions (follow steps 2-4 below)
+   - The UI will show deployment instructions (follow steps 2-5 below)
 
-2. **Sync app files to workspace**:
+2. **Configure credentials in `app.yaml`**:
+   - Edit `apps/feedback_review/app.yaml`
+   - Replace `YOUR_ACCESS_TOKEN_HERE` with your Databricks access token
+   - Generate token: **User Settings** → **Developer** → **Access Tokens** → **Generate New Token**
+
+3. **Sync app files to workspace**:
    ```bash
    cd apps/feedback_review
 
    # Sync files to your workspace (replace with your username)
-   databricks sync --watch . /Workspace/Users/<your-email>/radiologist-feedback-review
+   databricks sync . /Workspace/Users/<your-email>/radiologist-feedback-review
    ```
 
    **Note**: Use `--watch` flag to auto-sync changes during development, or omit it for one-time sync.
 
-3. **Deploy the app**:
+4. **Deploy the app**:
    ```bash
    # First deployment (use full path)
    databricks apps deploy radiologist-feedback-review \
@@ -50,7 +55,7 @@ Deploy the app directly in your Databricks workspace.
    databricks apps deploy radiologist-feedback-review
    ```
 
-4. **Access the app**:
+5. **Access the app**:
    - URL shown in the UI after deployment
    - Or check: `databricks apps get radiologist-feedback-review`
 
@@ -155,6 +160,8 @@ Edit `app.py` to customize:
 
 ## Architecture
 
+Both deployment options use SQL Connector to access Unity Catalog tables:
+
 ```
 Option 1: Databricks Apps (in workspace)
 ┌──────────────────────────────────────────────────────────────┐
@@ -165,7 +172,9 @@ Option 1: Databricks Apps (in workspace)
 │  └──────────────┴─────────────────┴──────────────────────┘   │
 └──────┬───────────────────────────────────────────────────────┘
        │
-       │ Direct Spark (in workspace)
+       │ SQL Connector (env vars from app.yaml)
+       ↓
+  [SQL Warehouse]
        ↓
   [Unity Catalog Tables]
        - gold.pneumonia_predictions
@@ -181,7 +190,7 @@ Option 2: Local Streamlit (on laptop)
 │  └──────────────┴─────────────────┴──────────────────────┘   │
 └──────┬───────────────────────────────────────────────────────┘
        │
-       │ SQL Connector (remote)
+       │ SQL Connector (secrets.toml)
        ↓
   [SQL Warehouse]
        ↓
@@ -190,7 +199,7 @@ Option 2: Local Streamlit (on laptop)
 **Key Features**:
 - Auto-save: Detects new selections via session state tracking
 - Image viewer: Looks up file_path from bronze table using image_id (security)
-- Dual-mode: Auto-detects Databricks vs local environment
+- Dual-mode credentials: Environment variables (Apps) or secrets (local)
 - Files API: Loads images using WorkspaceClient (works in both modes)
 ```
 
