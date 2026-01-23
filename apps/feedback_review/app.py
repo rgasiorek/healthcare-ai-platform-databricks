@@ -446,7 +446,7 @@ if 'predictions_df' not in st.session_state or st.session_state.reload_data:
         st.markdown("""
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
                         background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                        font-size: 18px; font-weight: bold;">
+                        font-size: 18px; font-weight: bold; color: #888;">
                 Loading predictions...
             </div>
         """, unsafe_allow_html=True)
