@@ -30,7 +30,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:32:19Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:47:28Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -81,8 +81,13 @@ class DatabricksConnection:
             print(f"[DatabricksConnection] Getting token from SDK...")
             from databricks.sdk import WorkspaceClient
             w = WorkspaceClient()
+            print(f"[DatabricksConnection] SDK auth type: {w.config.auth_type}")
+            print(f"[DatabricksConnection] SDK client_id: {w.config.client_id[:20] if w.config.client_id else None}...")
             token = w.config.token
-            print(f"[DatabricksConnection] Token obtained from SDK")
+            if token:
+                print(f"[DatabricksConnection] Token obtained from SDK (length: {len(token)})")
+            else:
+                print(f"[DatabricksConnection] WARNING: No token from SDK, trying OAuth flow...")
 
         print(f"[DatabricksConnection] Connecting to SQL warehouse...")
         connection = sql.connect(
