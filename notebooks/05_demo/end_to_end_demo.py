@@ -24,13 +24,13 @@
 # MAGIC    - Location: `notebooks/01_ingestion/ingest_kaggle_xray_data.py`
 # MAGIC
 # MAGIC 2. **Models Trained** - Both Keras and PyTorch models trained and registered
-# MAGIC    - Run: `/Shared/train-poc-model-remote-file` notebook (Keras)
-# MAGIC    - Run: `/Shared/train-pytorch-remote-file` notebook (PyTorch)
-# MAGIC    - Location: `notebooks/03_ml/train_poc_model_remote_file.py` and `train_pytorch_remote_file.py`
+# MAGIC    - Run: `/Shared/train-poc-model` notebook (Keras)
+# MAGIC    - Run: `/Shared/train-poc-model-pytorch` notebook (PyTorch)
+# MAGIC    - Location: `notebooks/03_ml/train_poc_model.py` and `train_poc_model_pytorch.py`
 # MAGIC
 # MAGIC 3. **Models Wrapped** - Inference tracking wrapper added to models
-# MAGIC    - Run: `/Shared/wrap-models-for-inference-tracking` notebook
-# MAGIC    - Location: `notebooks/03_ml/wrap_models_for_inference_tracking.py`
+# MAGIC    - Run: `/Shared/wrap_and_register_path_models` notebook
+# MAGIC    - Location: `notebooks/03_ml/wrap_and_register_path_models.py`
 # MAGIC
 # MAGIC 4. **Model Serving Deployed** - A/B test endpoint deployed via Terraform
 # MAGIC    - Endpoint: `pneumonia-classifier-ab-test`
