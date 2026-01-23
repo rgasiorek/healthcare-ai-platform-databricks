@@ -30,7 +30,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:28:47Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:32:19Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -88,7 +88,10 @@ class DatabricksConnection:
         connection = sql.connect(
             server_hostname=self.server_hostname,
             http_path=self.http_path,
-            access_token=token
+            access_token=token,
+            _socket_timeout=30,  # Socket timeout: 30 seconds
+            _tls_socket_timeout=30,  # TLS handshake timeout: 30 seconds
+            http_timeout=60  # HTTP request timeout: 60 seconds
         )
         print(f"[DatabricksConnection] Connection established successfully")
         return connection
