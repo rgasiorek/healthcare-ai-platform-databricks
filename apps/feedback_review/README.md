@@ -11,73 +11,9 @@ Interactive Streamlit app for reviewing AI pneumonia predictions and submitting 
 - ✅ **Session state caching**: Table doesn't reload on every interaction
 - ✅ **Summary stats**: See total predictions and feedback coverage
 
-## Deployment Options
+## Deployment
 
-### Option 1: Databricks Apps (Recommended - runs in workspace)
-
-Deploy the app directly in your Databricks workspace.
-
-**Requirements:**
-- Databricks workspace with Apps enabled
-- Databricks CLI installed and configured
-- Appropriate permissions to create apps
-
-**Deployment Steps:**
-
-1. **Create app in Databricks UI**:
-   - Navigate to **Compute** → **Apps**
-   - Click **Create custom app**
-   - Name: `radiologist-feedback-review`
-   - The UI will show deployment instructions (follow steps 2-4 below)
-
-2. **Grant app permissions** (in Databricks UI):
-   - After creating the app, configure which resources it can access:
-     - SQL Warehouse: `healthcare-warehouse` (for querying tables)
-     - Unity Catalog: `healthcare_catalog_dev` schema (read/write access to gold and bronze tables)
-   - The app will use its service principal identity to access these resources
-
-3. **Sync app files to workspace**:
-   ```bash
-   cd apps/feedback_review
-
-   # Sync files to your workspace (replace with your username)
-   databricks sync . /Workspace/Users/<your-email>/radiologist-feedback-review
-   ```
-
-   **Note**: Use `--watch` flag to auto-sync changes during development, or omit it for one-time sync.
-
-4. **Deploy the app**:
-   ```bash
-   # First deployment (use full path)
-   databricks apps deploy radiologist-feedback-review \
-     --source-code-path /Workspace/Users/<your-email>/radiologist-feedback-review
-
-   # Subsequent deploys (can omit path if unchanged)
-   databricks apps deploy radiologist-feedback-review
-   ```
-
-5. **Access the app**:
-   - URL shown in the UI after deployment
-   - Or check: `databricks apps get radiologist-feedback-review`
-
-**Note**: The app uses Databricks' built-in authentication - no manual token configuration needed! It automatically authenticates using its service principal identity.
-
-**Troubleshooting** (from app logs):
-- **Missing package**: Add to `requirements.txt`
-- **Permissions issue**: Give service principal access to Unity Catalog tables
-- **Missing environment variable**: Add to `env` section of `app.yaml`
-- **Wrong command at startup**: Fix `command` section of `app.yaml`
-
-**Benefits:**
-- ✅ Runs inside Databricks (no external hosting)
-- ✅ Authenticated automatically via service principal
-- ✅ Resource permissions managed in UI
-- ✅ No manual token configuration needed
-- ✅ Auto-sync during development with `--watch`
-
----
-
-### Option 2: Local Streamlit (runs on your laptop)
+### Local Streamlit (Primary method)
 
 Run the app locally on your machine and connect to Databricks remotely.
 
@@ -105,6 +41,18 @@ streamlit run app.py
 ```
 
 The app will open at http://localhost:8501
+
+---
+
+### Databricks Apps (Alternative)
+
+To deploy inside Databricks workspace:
+
+1. Navigate to **Compute** → **Apps** → **Create custom app**
+2. Name: `radiologist-feedback-review`
+3. Follow the deployment instructions shown in the Databricks UI
+
+The app includes `app.yaml` and `requirements.txt` for Databricks Apps deployment. It automatically uses service principal authentication when running in Databricks.
 
 ---
 
@@ -149,61 +97,35 @@ Edit `app.py` to customize:
 
 ## Troubleshooting
 
-**Databricks Apps:**
-- **App won't start**: Check logs in Apps UI → Click on app → View Logs
-- **Import errors**: Verify all dependencies are in `requirements.txt`
-- **Table access errors**: Ensure app has permissions to read `gold.pneumonia_predictions` and `gold.prediction_feedback`
-- **Image loading issues**: Verify workspace has access to Unity Catalog volumes
-
-**Local Streamlit:**
+**Common issues:**
 - **Connection errors**: Verify SQL warehouse is running in Databricks workspace
 - **Authentication errors**: Regenerate access token from User Settings > Access Tokens
 - **Missing data**: Check table names in `app.py` match your catalog name (default: `healthcare_catalog_dev`)
-- **Image loading issues**: Verify WorkspaceClient credentials in `secrets.toml` have access to Unity Catalog volumes
+- **Image loading issues**: Verify credentials have access to Unity Catalog volumes
+- **Databricks Apps**: Check app logs in the Databricks UI for deployment issues
 
 ## Architecture
 
-Both deployment options use SQL Connector to access Unity Catalog tables:
-
 ```
-Option 1: Databricks Apps (in workspace)
+Streamlit App (Local or Databricks Apps)
 ┌──────────────────────────────────────────────────────────────┐
-│  Streamlit App (Databricks Apps)                              │
 │  ┌──────────────┬─────────────────┬──────────────────────┐   │
 │  │ Auto-save    │ Session State   │ Image Viewer         │   │
 │  │ Detection    │ Cache           │ (Files API)          │   │
 │  └──────────────┴─────────────────┴──────────────────────┘   │
 └──────┬───────────────────────────────────────────────────────┘
        │
-       │ SQL Connector (env vars from app.yaml)
-       ↓
-  [SQL Warehouse]
+       │ SQL Connector (Databricks SQL Warehouse)
        ↓
   [Unity Catalog Tables]
        - gold.pneumonia_predictions
        - gold.prediction_feedback
        - bronze.kaggle_xray_metadata
 
-Option 2: Local Streamlit (on laptop)
-┌──────────────────────────────────────────────────────────────┐
-│  Streamlit App (Local)                                        │
-│  ┌──────────────┬─────────────────┬──────────────────────┐   │
-│  │ Auto-save    │ Session State   │ Image Viewer         │   │
-│  │ Detection    │ Cache           │ (Files API)          │   │
-│  └──────────────┴─────────────────┴──────────────────────┘   │
-└──────┬───────────────────────────────────────────────────────┘
-       │
-       │ SQL Connector (secrets.toml)
-       ↓
-  [SQL Warehouse]
-       ↓
-  [Unity Catalog Tables]
-
 **Key Features**:
 - Auto-save: Detects new selections via session state tracking
-- Image viewer: Looks up file_path from bronze table using image_id (security)
-- Dual-mode credentials: Environment variables (Apps) or secrets (local)
-- Files API: Loads images using WorkspaceClient (works in both modes)
+- Image viewer: Looks up file_path from bronze table using image_id
+- Dual-mode auth: Secrets (local) or service principal (Databricks Apps)
 ```
 
 ## Implementation Highlights
