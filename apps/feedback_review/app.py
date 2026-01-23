@@ -33,7 +33,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:56:27Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:58:42Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -92,19 +92,26 @@ if IS_DATABRICKS_APPS:
 else:
     # Use SQL connector for localhost (requires PAT token)
     print(f"[APP] Initializing SQL connector...")
-    server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
-    http_path = st.secrets.get("databricks", {}).get("http_path")
-    access_token = st.secrets.get("databricks", {}).get("access_token")
-    print(f"[APP] SQL connector configured")
 
-    def execute_query(query):
-        """Execute SQL query using SQL connector"""
-        print(f"[SQL] Executing query via SQL connector...")
-        connection = sql.connect(
+    def get_sql_connection():
+        """Create SQL connection with config from secrets"""
+        server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
+        http_path = st.secrets.get("databricks", {}).get("http_path")
+        access_token = st.secrets.get("databricks", {}).get("access_token")
+
+        if not all([server_hostname, http_path, access_token]):
+            raise ValueError(f"Missing SQL connector config: hostname={server_hostname}, path={http_path}, token={'***' if access_token else None}")
+
+        return sql.connect(
             server_hostname=server_hostname,
             http_path=http_path,
             access_token=access_token
         )
+
+    def execute_query(query):
+        """Execute SQL query using SQL connector"""
+        print(f"[SQL] Executing query via SQL connector...")
+        connection = get_sql_connection()
         cursor = connection.cursor()
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -118,11 +125,7 @@ else:
     def execute_insert(query):
         """Execute INSERT query using SQL connector"""
         print(f"[SQL] Executing INSERT via SQL connector...")
-        connection = sql.connect(
-            server_hostname=server_hostname,
-            http_path=http_path,
-            access_token=access_token
-        )
+        connection = get_sql_connection()
         cursor = connection.cursor()
         cursor.execute(query)
         cursor.close()
