@@ -30,7 +30,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:21:03Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:28:47Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -61,31 +61,44 @@ class DatabricksConnection:
             self.server_hostname = databricks_host.replace("https://", "")
             self.http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044")
             self.access_token = None  # Will use default service principal auth
+            print(f"[DatabricksConnection] Running in Databricks Apps mode")
+            print(f"[DatabricksConnection] Server: {self.server_hostname}")
+            print(f"[DatabricksConnection] HTTP Path: {self.http_path}")
         else:
             # Local: use secrets
             self.server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
             self.http_path = st.secrets.get("databricks", {}).get("http_path")
             self.access_token = st.secrets.get("databricks", {}).get("access_token")
+            print(f"[DatabricksConnection] Running in Local mode")
 
     def connect(self):
         """Create SQL connection with appropriate auth"""
+        print(f"[DatabricksConnection] Attempting to connect...")
         # Always need a token for SQL connector - get from SDK if not in secrets
         token = self.access_token
         if not token:
             # Databricks Apps: get token from SDK's default auth
+            print(f"[DatabricksConnection] Getting token from SDK...")
             from databricks.sdk import WorkspaceClient
             w = WorkspaceClient()
             token = w.config.token
+            print(f"[DatabricksConnection] Token obtained from SDK")
 
-        return sql.connect(
+        print(f"[DatabricksConnection] Connecting to SQL warehouse...")
+        connection = sql.connect(
             server_hostname=self.server_hostname,
             http_path=self.http_path,
             access_token=token
         )
+        print(f"[DatabricksConnection] Connection established successfully")
+        return connection
 
 # Initialize connection wrapper once at module level
+print(f"[APP] Initializing DatabricksConnection...")
 db_connection = DatabricksConnection()
+print(f"[APP] DatabricksConnection initialized")
 
+print(f"[APP] Setting page config...")
 st.set_page_config(
     page_title="Radiologist Feedback Review",
     page_icon="📋",
@@ -215,6 +228,7 @@ with st.sidebar:
 # Database connection helper
 def get_predictions_for_review():
     """Load predictions that don't have feedback yet"""
+    print(f"[get_predictions_for_review] Starting data load...")
     query = f"""
         SELECT
             p.prediction_id,
@@ -236,19 +250,25 @@ def get_predictions_for_review():
 
     if USE_SQL_CONNECTOR:
         # Use SQL connector (for local or Databricks Apps)
+        print(f"[get_predictions_for_review] Using SQL connector...")
         connection = db_connection.connect()
         cursor = connection.cursor()
+        print(f"[get_predictions_for_review] Executing query...")
         cursor.execute(query)
+        print(f"[get_predictions_for_review] Fetching results...")
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
         cursor.close()
         connection.close()
+        print(f"[get_predictions_for_review] Query completed, {len(rows)} rows fetched")
 
         df = pd.DataFrame(rows, columns=columns)
     else:
         # Use Spark (for Databricks Apps)
+        print(f"[get_predictions_for_review] Using Spark...")
         spark_df = spark.sql(query)
         df = spark_df.toPandas()
+        print(f"[get_predictions_for_review] Query completed, {len(df)} rows fetched")
 
     return df
 
@@ -342,11 +362,14 @@ def save_feedback(feedback_df, radiologist_id):
 
 
 # Initialize session state for predictions data
+print(f"[APP] Initializing session state...")
 if 'reload_data' not in st.session_state:
     st.session_state.reload_data = False
 
 # Check if we need to load data
+print(f"[APP] Checking if data needs to be loaded...")
 if 'predictions_df' not in st.session_state or st.session_state.reload_data:
+    print(f"[APP] Loading data from database...")
     # Show loading overlay with grayed-out skeleton table
     loading_container = st.empty()
 
@@ -399,11 +422,14 @@ if 'predictions_df' not in st.session_state or st.session_state.reload_data:
         """, unsafe_allow_html=True)
 
     # Load actual data
+    print(f"[APP] Calling get_predictions_for_review()...")
     st.session_state.predictions_df = get_predictions_for_review()
+    print(f"[APP] Data loaded successfully, {len(st.session_state.predictions_df)} predictions")
     st.session_state.reload_data = False
 
     # Clear loading overlay
     loading_container.empty()
+    print(f"[APP] Rerunning app to display data...")
     st.rerun()
 
 predictions_df = st.session_state.predictions_df
