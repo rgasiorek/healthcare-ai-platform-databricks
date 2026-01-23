@@ -77,6 +77,16 @@ output "ingestion_notebook_path" {
 }
 
 # Model Serving Endpoints
+output "poc_endpoint_name" {
+  value       = databricks_model_serving.pneumonia_poc.name
+  description = "POC endpoint name (original model)"
+}
+
+output "poc_endpoint_url" {
+  value       = "https://dbc-68a1cdfa-43b8.cloud.databricks.com/serving-endpoints/${databricks_model_serving.pneumonia_poc.name}/invocations"
+  description = "POC endpoint invocation URL"
+}
+
 output "ab_test_endpoint_name" {
   value       = databricks_model_serving.pneumonia_ab_test.name
   description = "A/B testing endpoint name"
