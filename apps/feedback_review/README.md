@@ -15,31 +15,38 @@ Interactive Streamlit app for reviewing AI pneumonia predictions and submitting 
 
 ### Option 1: Databricks Apps (Recommended - runs in workspace)
 
-Deploy the app directly in your Databricks workspace via UI.
+Deploy the app directly in your Databricks workspace.
 
 **Requirements:**
 - Databricks workspace with Apps enabled
 - Appropriate permissions to create apps
 
-**Steps:**
+**Deployment Method A: Via UI** (Easiest)
 
-1. **Prepare app files**: Ensure you have these files in `apps/feedback_review/`:
-   - `app.py` (main app)
-   - `requirements.txt` (dependencies)
-   - `app.yaml` (Databricks Apps config)
+1. Navigate to **Compute** → **Apps** in Databricks UI
+2. Click **Create App**
+3. Configure:
+   - **Name**: `radiologist-feedback-review`
+   - **Source code**: Upload `apps/feedback_review/` folder or select workspace path
+4. Databricks reads `app.yaml` and installs dependencies from `requirements.txt`
+5. Wait for deployment (~2-3 minutes)
+6. Access URL shown in Apps UI
 
-2. **Deploy via Databricks UI**:
-   - Navigate to **Compute** → **Apps** in Databricks UI
-   - Click **Create App**
-   - Name: `radiologist-feedback-review`
-   - Source code: Upload or point to workspace path containing `apps/feedback_review` files
-   - Databricks will read `app.yaml` and install dependencies from `requirements.txt`
-   - Wait for app to deploy (~2-3 minutes)
+**Deployment Method B: Via CLI**
 
-3. **Access the app**:
-   - URL will be shown in Apps UI after deployment
-   - App runs with workspace authentication automatically
-   - Uses Spark directly to access tables (no secrets needed)
+```bash
+# 1. Upload app files to workspace
+databricks workspace import-dir apps/feedback_review /Workspace/apps/feedback_review --overwrite
+
+# 2. Deploy the app
+databricks apps deploy radiologist-feedback-review --source-code-path /Workspace/apps/feedback_review
+
+# 3. Check app status
+databricks apps list
+
+# 4. Get app URL
+databricks apps get radiologist-feedback-review
+```
 
 **Benefits:**
 - ✅ Runs inside Databricks (no external hosting)
