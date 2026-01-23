@@ -15,6 +15,12 @@ import os
 IS_DATABRICKS_APPS = os.getenv("DATABRICKS_HOST") is not None
 IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
 
+print(f"========================================")
+print(f"[APP] Starting Radiologist Feedback App")
+print(f"[APP] Version: {APP_VERSION}")
+print(f"[APP] Environment: {'Databricks Apps' if IS_DATABRICKS_APPS else 'Databricks Notebook' if IS_DATABRICKS_NOTEBOOK else 'Localhost'}")
+print(f"========================================")
+
 if IS_DATABRICKS_NOTEBOOK:
     # Running in Databricks notebook/cluster - use Spark directly
     from pyspark.sql import SparkSession
@@ -33,7 +39,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T15:05:08Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T15:08:00Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -69,8 +75,13 @@ if IS_DATABRICKS_APPS:
         print(f"[SDK] Query completed, status: {response.status.state}")
 
         if response.status.state == "FAILED":
-            error_msg = response.status.error.message if response.status.error else "Unknown error"
-            print(f"[SDK] Query FAILED: {error_msg}")
+            # Try multiple ways to get error message
+            error_msg = "Unknown error"
+            if hasattr(response.status, 'error') and response.status.error:
+                error_msg = str(response.status.error)
+            print(f"[SDK] Query FAILED!")
+            print(f"[SDK] Error: {error_msg}")
+            print(f"[SDK] Full response status: {response.status}")
             raise Exception(f"SQL query failed: {error_msg}")
 
         # Convert SDK response to pandas DataFrame
@@ -87,6 +98,7 @@ if IS_DATABRICKS_APPS:
     def execute_insert(query):
         """Execute INSERT query using SDK"""
         print(f"[SDK] Executing INSERT via SDK...")
+        print(f"[SDK] Query: {query[:200]}...")  # Log first 200 chars
         response = workspace_client.statement_execution.execute_statement(
             warehouse_id=warehouse_id,
             statement=query,
@@ -94,8 +106,13 @@ if IS_DATABRICKS_APPS:
         )
         print(f"[SDK] INSERT completed, status: {response.status.state}")
         if response.status.state == "FAILED":
-            error_msg = response.status.error.message if response.status.error else "Unknown error"
-            print(f"[SDK] INSERT FAILED: {error_msg}")
+            # Try multiple ways to get error message
+            error_msg = "Unknown error"
+            if hasattr(response.status, 'error') and response.status.error:
+                error_msg = str(response.status.error)
+            print(f"[SDK] INSERT FAILED!")
+            print(f"[SDK] Error: {error_msg}")
+            print(f"[SDK] Full response status: {response.status}")
             raise Exception(f"SQL INSERT failed: {error_msg}")
 
 else:
