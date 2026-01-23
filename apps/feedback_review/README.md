@@ -19,40 +19,53 @@ Deploy the app directly in your Databricks workspace.
 
 **Requirements:**
 - Databricks workspace with Apps enabled
+- Databricks CLI installed and configured
 - Appropriate permissions to create apps
 
-**Deployment Method A: Via UI** (Easiest)
+**Deployment Steps:**
 
-1. Navigate to **Compute** → **Apps** in Databricks UI
-2. Click **Create App**
-3. Configure:
-   - **Name**: `radiologist-feedback-review`
-   - **Source code**: Upload `apps/feedback_review/` folder or select workspace path
-4. Databricks reads `app.yaml` and installs dependencies from `requirements.txt`
-5. Wait for deployment (~2-3 minutes)
-6. Access URL shown in Apps UI
+1. **Create app in Databricks UI**:
+   - Navigate to **Compute** → **Apps**
+   - Click **Create custom app**
+   - Name: `radiologist-feedback-review`
+   - The UI will show deployment instructions (follow steps 2-4 below)
 
-**Deployment Method B: Via CLI**
+2. **Sync app files to workspace**:
+   ```bash
+   cd apps/feedback_review
 
-```bash
-# 1. Upload app files to workspace
-databricks workspace import-dir apps/feedback_review /Workspace/apps/feedback_review --overwrite
+   # Sync files to your workspace (replace with your username)
+   databricks sync --watch . /Workspace/Users/<your-email>/radiologist-feedback-review
+   ```
 
-# 2. Deploy the app
-databricks apps deploy radiologist-feedback-review --source-code-path /Workspace/apps/feedback_review
+   **Note**: Use `--watch` flag to auto-sync changes during development, or omit it for one-time sync.
 
-# 3. Check app status
-databricks apps list
+3. **Deploy the app**:
+   ```bash
+   # First deployment (use full path)
+   databricks apps deploy radiologist-feedback-review \
+     --source-code-path /Workspace/Users/<your-email>/radiologist-feedback-review
 
-# 4. Get app URL
-databricks apps get radiologist-feedback-review
-```
+   # Subsequent deploys (can omit path if unchanged)
+   databricks apps deploy radiologist-feedback-review
+   ```
+
+4. **Access the app**:
+   - URL shown in the UI after deployment
+   - Or check: `databricks apps get radiologist-feedback-review`
+
+**Troubleshooting** (from app logs):
+- **Missing package**: Add to `requirements.txt`
+- **Permissions issue**: Give service principal access to Unity Catalog tables
+- **Missing environment variable**: Add to `env` section of `app.yaml`
+- **Wrong command at startup**: Fix `command` section of `app.yaml`
 
 **Benefits:**
 - ✅ Runs inside Databricks (no external hosting)
 - ✅ Authenticated automatically via workspace
 - ✅ Direct Spark access to tables
 - ✅ No secrets management needed
+- ✅ Auto-sync during development with `--watch`
 
 ---
 
