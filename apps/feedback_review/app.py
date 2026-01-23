@@ -27,6 +27,7 @@ except:
 # Detect environment
 IS_DATABRICKS_APPS = os.getenv("DATABRICKS_HOST") is not None
 IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
+USE_SQL_CONNECTOR = not IS_DATABRICKS_APPS and not IS_DATABRICKS_NOTEBOOK
 
 print(f"========================================")
 print(f"[APP] Starting Radiologist Feedback App")
@@ -194,27 +195,15 @@ if "image" in query_params:
                 LIMIT 1
             """
 
-            if USE_SQL_CONNECTOR:
-                connection = db_connection.connect()
-                cursor = connection.cursor()
-                cursor.execute(lookup_query)
-                result = cursor.fetchone()
-                cursor.close()
-                connection.close()
+            # Use execute_query which handles both SDK and SQL connector
+            df = execute_query(lookup_query)
 
-                if not result:
-                    st.error(f"Image not found: {image_id}")
-                    st.stop()
+            if df.empty:
+                st.error(f"Image not found: {image_id}")
+                st.stop()
 
-                image_path, filename = result
-            else:
-                result = spark.sql(lookup_query).collect()
-                if not result:
-                    st.error(f"Image not found: {image_id}")
-                    st.stop()
-
-                image_path = result[0].file_path
-                filename = result[0].filename
+            image_path = df.iloc[0]['file_path']
+            filename = df.iloc[0]['filename']
 
             # Load the image using Files API (works both locally and in Databricks Apps)
             from databricks.sdk import WorkspaceClient
@@ -225,18 +214,19 @@ if "image" in query_params:
             clean_path = image_path.replace("dbfs:", "")
 
             # Use Files API to download (with credentials for local mode)
-            if IS_DATABRICKS:
-                # In Databricks Apps: use default auth
+            if IS_DATABRICKS_APPS or IS_DATABRICKS_NOTEBOOK:
+                # In Databricks: use default auth
                 w = WorkspaceClient()
             else:
-                # Running locally or Databricks Apps
-                if db_connection.access_token:
-                    # Local: use explicit credentials
-                    workspace_host = db_connection.server_hostname.split('/')[0] if '/' in db_connection.server_hostname else db_connection.server_hostname
-                    w = WorkspaceClient(host=f"https://{workspace_host}", token=db_connection.access_token)
+                # Running locally: use explicit credentials from secrets
+                server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
+                access_token = st.secrets.get("databricks", {}).get("access_token")
+                if server_hostname and access_token:
+                    workspace_host = server_hostname.split('/')[0] if '/' in server_hostname else server_hostname
+                    w = WorkspaceClient(host=f"https://{workspace_host}", token=access_token)
                 else:
-                    # Databricks Apps: use default authentication
-                    w = WorkspaceClient()
+                    st.error("Missing Databricks credentials in secrets")
+                    st.stop()
 
             file_content = w.files.download(clean_path).contents.read()
 
