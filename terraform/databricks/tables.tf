@@ -403,6 +403,7 @@ resource "databricks_sql_table" "gold_prediction_feedback" {
   name         = "prediction_feedback"
   table_type   = "EXTERNAL"
   data_source_format = "DELTA"
+  storage_location   = "${databricks_external_location.gold.url}/prediction_feedback"
 
   comment = "Ground truth labels for model predictions - enables accuracy tracking and Champion/Challenger A/B testing"
 
