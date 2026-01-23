@@ -29,6 +29,19 @@ else:
         st.error("❌ databricks-sql-connector not installed. Run: pip install databricks-sql-connector")
         st.stop()
 
+# Version info - update this with each deployment
+APP_VERSION = "2026-01-23T14:21:03Z"  # ISO timestamp of last deployment
+
+# Try to get git commit hash if available
+try:
+    import subprocess
+    git_hash = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
+                                      stderr=subprocess.DEVNULL,
+                                      cwd=os.path.dirname(__file__)).decode('utf-8').strip()
+    APP_VERSION = f"{APP_VERSION} ({git_hash})"
+except:
+    pass  # Git not available or not in a repo
+
 # Configuration
 CATALOG = "healthcare_catalog_dev"
 PREDICTIONS_TABLE = f"{CATALOG}.gold.pneumonia_predictions"
@@ -193,6 +206,10 @@ with st.sidebar:
         if 'previous_assessments' in st.session_state:
             del st.session_state.previous_assessments
         st.rerun()
+
+    # Version info
+    st.markdown("---")
+    st.caption(f"Version: {APP_VERSION}")
 
 
 # Database connection helper
@@ -559,3 +576,8 @@ try:
 except Exception as e:
     st.error(f"Error: {str(e)}")
     st.exception(e)
+
+# Version footer (always visible)
+st.markdown("---")
+st.markdown(f"<div style='text-align: center; color: #888; font-size: 0.8em;'>App Version: {APP_VERSION}</div>",
+           unsafe_allow_html=True)
