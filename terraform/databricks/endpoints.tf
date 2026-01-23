@@ -1,35 +1,6 @@
 # Model Serving Endpoints
 # Deploys ML models as REST API endpoints with A/B testing support
 
-# Simple Demo Endpoint - Single Model (For Onboarding)
-# This endpoint is used for the demo_model_usage.py notebook
-resource "databricks_model_serving" "pneumonia_demo" {
-  name = "pneumonia-demo"
-
-  config {
-    # Single Keras model (Champion model for simplicity)
-    # Remote file version: accepts Unity Catalog file paths via Files API
-    served_entities {
-      entity_name    = "healthcare_catalog_${var.environment}.models.pneumonia_poc_classifier_remote_file"
-      entity_version = "9"
-      workload_size  = "Small"
-      scale_to_zero_enabled = true
-
-      # Environment variables for WorkspaceClient authentication
-      environment_vars = {
-        "DATABRICKS_HOST"  = var.databricks_workspace_host
-        "DATABRICKS_TOKEN" = var.databricks_model_serving_token
-      }
-    }
-
-    # No traffic config needed (single model)
-    # No inference logging needed (demo purposes only)
-  }
-
-  # Dependencies: Model must be registered in MLflow first
-  # Run wrap_and_register_path_models.py notebook before terraform apply
-}
-
 # A/B Testing Endpoint - Champion vs Challenger
 resource "databricks_model_serving" "pneumonia_ab_test" {
   name = "pneumonia-classifier-ab-test"
