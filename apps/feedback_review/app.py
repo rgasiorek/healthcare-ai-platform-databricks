@@ -56,18 +56,19 @@ class DatabricksConnection:
 
     def connect(self):
         """Create SQL connection with appropriate auth"""
-        if self.access_token:
-            return sql.connect(
-                server_hostname=self.server_hostname,
-                http_path=self.http_path,
-                access_token=self.access_token
-            )
-        else:
-            # Databricks Apps: use default auth
-            return sql.connect(
-                server_hostname=self.server_hostname,
-                http_path=self.http_path
-            )
+        # Always need a token for SQL connector - get from SDK if not in secrets
+        token = self.access_token
+        if not token:
+            # Databricks Apps: get token from SDK's default auth
+            from databricks.sdk import WorkspaceClient
+            w = WorkspaceClient()
+            token = w.config.token
+
+        return sql.connect(
+            server_hostname=self.server_hostname,
+            http_path=self.http_path,
+            access_token=token
+        )
 
 # Initialize connection wrapper once at module level
 db_connection = DatabricksConnection()
