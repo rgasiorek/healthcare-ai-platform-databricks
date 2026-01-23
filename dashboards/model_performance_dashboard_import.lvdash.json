@@ -19,12 +19,113 @@
         "ORDER BY \n",
         "CASE f.feedback_type WHEN 'true-positive' THEN 1 WHEN 'false-positive' THEN 2 WHEN 'false-negative' THEN 3 WHEN 'true-negative' THEN 4 ELSE 5 END"
       ]
+    },
+    {
+      "name": "false_positives_ds",
+      "displayName": "Recent False Positives",
+      "queryLines": [
+        "SELECT \n",
+        "  f.feedback_id,\n",
+        "  p.image_id,\n",
+        "  p.predicted_at,\n",
+        "  ROUND(p.prediction_probability, 3) as ai_confidence,\n",
+        "  CASE WHEN logs.model_name LIKE '%pytorch%' THEN 'PyTorch' WHEN logs.model_name LIKE '%classifier%' AND logs.model_name NOT LIKE '%pytorch%' THEN 'Keras' ELSE logs.model_name END as model_name,\n",
+        "  CONCAT('?image=', p.image_id) as image_link\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
+        "INNER JOIN (\n",
+        "  SELECT request_metadata['model_name'] as model_name, get_json_object(response, '$.predictions[0][0]') as pred_prob, timestamp_ms \n",
+        "  FROM healthcare_catalog_dev.gold.pneumonia_classifier_payload WHERE status_code = 200\n",
+        ") logs ON CAST(p.prediction_probability AS STRING) = CAST(logs.pred_prob AS STRING) AND ABS(unix_timestamp(p.predicted_at) * 1000 - logs.timestamp_ms) < 5000\n",
+        "WHERE f.feedback_type = 'false-positive'\n",
+        "ORDER BY f.timestamp DESC\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "error_by_split_ds",
+      "displayName": "Errors by Dataset Split",
+      "queryLines": [
+        "SELECT \n",
+        "  bronze.dataset_split,\n",
+        "  f.feedback_type,\n",
+        "  COUNT(*) as count\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
+        "INNER JOIN healthcare_catalog_dev.bronze.kaggle_xray_metadata bronze ON p.image_id = bronze.image_id\n",
+        "GROUP BY bronze.dataset_split, f.feedback_type\n",
+        "ORDER BY bronze.dataset_split"
+      ]
+    },
+    {
+      "name": "size_accuracy_ds",
+      "displayName": "File Size vs Accuracy",
+      "queryLines": [
+        "SELECT \n",
+        "  CASE \n",
+        "    WHEN bronze.file_size_bytes < 30000 THEN 'Small (<30KB)'\n",
+        "    WHEN bronze.file_size_bytes < 60000 THEN 'Medium (30-60KB)'\n",
+        "    ELSE 'Large (>60KB)'\n",
+        "  END as size_category,\n",
+        "  ROUND(SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as accuracy_pct,\n",
+        "  COUNT(*) as total_predictions\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
+        "INNER JOIN healthcare_catalog_dev.bronze.kaggle_xray_metadata bronze ON p.image_id = bronze.image_id\n",
+        "GROUP BY CASE \n",
+        "    WHEN bronze.file_size_bytes < 30000 THEN 'Small (<30KB)'\n",
+        "    WHEN bronze.file_size_bytes < 60000 THEN 'Medium (30-60KB)'\n",
+        "    ELSE 'Large (>60KB)'\n",
+        "  END\n",
+        "ORDER BY size_category"
+      ]
+    },
+    {
+      "name": "confidence_correctness_ds",
+      "displayName": "Confidence vs Correctness",
+      "queryLines": [
+        "SELECT \n",
+        "  ROUND(p.prediction_probability, 2) as confidence,\n",
+        "  CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 'Correct' ELSE 'Incorrect' END as correctness,\n",
+        "  COUNT(*) as count\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
+        "GROUP BY ROUND(p.prediction_probability, 2), CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 'Correct' ELSE 'Incorrect' END"
+      ]
+    },
+    {
+      "name": "error_rate_time_ds",
+      "displayName": "Error Rate Over Time",
+      "queryLines": [
+        "SELECT \n",
+        "  DATE_TRUNC('day', f.timestamp) as date,\n",
+        "  ROUND(SUM(CASE WHEN f.feedback_type IN ('false-positive', 'false-negative') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as error_rate_pct,\n",
+        "  COUNT(*) as total_predictions\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "GROUP BY DATE_TRUNC('day', f.timestamp)\n",
+        "ORDER BY date DESC"
+      ]
+    },
+    {
+      "name": "radiologist_agreement_ds",
+      "displayName": "Per-Radiologist Agreement",
+      "queryLines": [
+        "SELECT \n",
+        "  COALESCE(f.radiologist_id, 'Unknown') as radiologist_id,\n",
+        "  ROUND(SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as agreement_pct,\n",
+        "  COUNT(*) as total_reviews,\n",
+        "  SUM(CASE WHEN f.feedback_type IN ('false-positive', 'false-negative') THEN 1 ELSE 0 END) as disagreements\n",
+        "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
+        "WHERE f.radiologist_id IS NOT NULL\n",
+        "GROUP BY COALESCE(f.radiologist_id, 'Unknown')\n",
+        "ORDER BY agreement_pct DESC"
+      ]
     }
   ],
   "pages": [
     {
       "name": "model_metrics",
-      "displayName": "Model Metrics",
+      "displayName": "Model Performance Analysis",
       "layout": [
         {
           "widget": {
@@ -88,7 +189,341 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 6
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "false_positives_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "false_positives_ds",
+                  "fields": [
+                    {
+                      "name": "image_id",
+                      "expression": "`image_id`"
+                    },
+                    {
+                      "name": "predicted_at",
+                      "expression": "`predicted_at`"
+                    },
+                    {
+                      "name": "ai_confidence",
+                      "expression": "`ai_confidence`"
+                    },
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    },
+                    {
+                      "name": "image_link",
+                      "expression": "`image_link`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "error_rate_over_time",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "error_rate_time_ds",
+                  "fields": [
+                    {
+                      "name": "date",
+                      "expression": "`date`"
+                    },
+                    {
+                      "name": "error_rate_pct",
+                      "expression": "`error_rate_pct`"
+                    },
+                    {
+                      "name": "total_predictions",
+                      "expression": "`total_predictions`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Date"
+                },
+                "y": {
+                  "fieldName": "error_rate_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Error Rate %"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Error Rate Over Time"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "confidence_vs_correctness",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "confidence_correctness_ds",
+                  "fields": [
+                    {
+                      "name": "confidence",
+                      "expression": "`confidence`"
+                    },
+                    {
+                      "name": "correctness",
+                      "expression": "`correctness`"
+                    },
+                    {
+                      "name": "count",
+                      "expression": "`count`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "confidence",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "AI Confidence"
+                },
+                "y": {
+                  "fieldName": "count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count"
+                },
+                "color": {
+                  "fieldName": "correctness",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Correctness"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Confidence vs Correctness"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "error_by_dataset_split",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "error_by_split_ds",
+                  "fields": [
+                    {
+                      "name": "dataset_split",
+                      "expression": "`dataset_split`"
+                    },
+                    {
+                      "name": "feedback_type",
+                      "expression": "`feedback_type`"
+                    },
+                    {
+                      "name": "count",
+                      "expression": "`count`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "dataset_split",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Dataset Split"
+                },
+                "y": {
+                  "fieldName": "count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count"
+                },
+                "color": {
+                  "fieldName": "feedback_type",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Feedback Type"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Errors by Dataset Split"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "file_size_vs_accuracy",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "size_accuracy_ds",
+                  "fields": [
+                    {
+                      "name": "size_category",
+                      "expression": "`size_category`"
+                    },
+                    {
+                      "name": "accuracy_pct",
+                      "expression": "`accuracy_pct`"
+                    },
+                    {
+                      "name": "total_predictions",
+                      "expression": "`total_predictions`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "size_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Image Size"
+                },
+                "y": {
+                  "fieldName": "accuracy_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Accuracy %"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "File Size vs Accuracy"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 13,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "radiologist_agreement",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "radiologist_agreement_ds",
+                  "fields": [
+                    {
+                      "name": "radiologist_id",
+                      "expression": "`radiologist_id`"
+                    },
+                    {
+                      "name": "agreement_pct",
+                      "expression": "`agreement_pct`"
+                    },
+                    {
+                      "name": "total_reviews",
+                      "expression": "`total_reviews`"
+                    },
+                    {
+                      "name": "disagreements",
+                      "expression": "`disagreements`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 4
           }
         }
       ],
