@@ -33,7 +33,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:59:35Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T15:05:08Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -367,10 +367,13 @@ def save_feedback(feedback_df, radiologist_id):
         # Use SDK or SQL connector (both use execute_insert helper)
         for record in records:
             insert_sql = f"""
-                INSERT INTO {FEEDBACK_TABLE} VALUES (
+                INSERT INTO {FEEDBACK_TABLE}
+                (feedback_id, prediction_id, timestamp, ground_truth, feedback_type,
+                 radiologist_id, confidence, feedback_source, notes)
+                VALUES (
                     '{record['feedback_id']}',
                     '{record['prediction_id']}',
-                    '{record['timestamp']}',
+                    CAST('{record['timestamp']}' AS TIMESTAMP),
                     '{record['ground_truth']}',
                     '{record['feedback_type']}',
                     '{record['radiologist_id']}',
@@ -583,10 +586,13 @@ try:
             else:
                 # Use SDK or SQL connector (both use execute_insert helper)
                 insert_sql = f"""
-                    INSERT INTO {FEEDBACK_TABLE} VALUES (
+                    INSERT INTO {FEEDBACK_TABLE}
+                    (feedback_id, prediction_id, timestamp, ground_truth, feedback_type,
+                     radiologist_id, confidence, feedback_source, notes)
+                    VALUES (
                         '{record['feedback_id']}',
                         '{record['prediction_id']}',
-                        '{record['timestamp']}',
+                        CAST('{record['timestamp']}' AS TIMESTAMP),
                         '{record['ground_truth']}',
                         '{record['feedback_type']}',
                         '{record['radiologist_id']}',
