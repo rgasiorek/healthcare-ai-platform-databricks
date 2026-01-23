@@ -70,6 +70,10 @@ resource "databricks_sql_table" "bronze_kaggle_metadata" {
     "delta.writePartitionColumnsToParquet" = "true"
   }
 
+  lifecycle {
+    ignore_changes = [effective_properties]
+  }
+
   depends_on = [databricks_external_location.bronze]
 }
 
