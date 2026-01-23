@@ -11,26 +11,29 @@ import uuid
 # Detect environment and choose connection method
 import os
 
-# Databricks Apps doesn't have Spark - always use SQL connector for Apps
-# Only use Spark when explicitly running in notebooks/clusters
+# Detect environment
+IS_DATABRICKS_APPS = os.getenv("DATABRICKS_HOST") is not None
 IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
 
 if IS_DATABRICKS_NOTEBOOK:
     # Running in Databricks notebook/cluster - use Spark directly
-    USE_SQL_CONNECTOR = False
     from pyspark.sql import SparkSession
     spark = SparkSession.builder.getOrCreate()
+elif IS_DATABRICKS_APPS:
+    # Running in Databricks Apps - use SDK (supports OAuth m2m)
+    from databricks.sdk import WorkspaceClient
+    print(f"[ENV] Running in Databricks Apps - using SDK SQL execution")
 else:
-    # Running locally or in Databricks Apps - use SQL connector
+    # Running locally - use SQL connector (requires PAT token)
     try:
         from databricks import sql
-        USE_SQL_CONNECTOR = True
+        print(f"[ENV] Running locally - using SQL connector")
     except ImportError:
         st.error("❌ databricks-sql-connector not installed. Run: pip install databricks-sql-connector")
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:48:57Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:56:27Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -47,66 +50,84 @@ CATALOG = "healthcare_catalog_dev"
 PREDICTIONS_TABLE = f"{CATALOG}.gold.pneumonia_predictions"
 FEEDBACK_TABLE = f"{CATALOG}.gold.prediction_feedback"
 
-# SQL Connection Wrapper - handles auth internally
-class DatabricksConnection:
-    """Wrapper for Databricks SQL connector that handles authentication internally"""
+# SQL execution wrapper - handles both SDK and SQL connector
+if IS_DATABRICKS_APPS:
+    # Use SDK for Databricks Apps (supports OAuth m2m)
+    print(f"[APP] Initializing Databricks SDK client...")
+    workspace_client = WorkspaceClient()
+    warehouse_id = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044").split("/")[-1]
+    print(f"[APP] Using warehouse ID: {warehouse_id}")
 
-    def __init__(self):
-        """Initialize connection config based on environment (Apps vs Local)"""
-        # Check if running in Databricks Apps (DATABRICKS_HOST env var is set by Databricks Apps)
-        databricks_host = os.getenv("DATABRICKS_HOST")
-
-        if databricks_host:
-            # Databricks Apps: auto-detect workspace hostname
-            self.server_hostname = databricks_host.replace("https://", "")
-            self.http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044")
-            self.access_token = None  # Will use default service principal auth
-            print(f"[DatabricksConnection] Running in Databricks Apps mode")
-            print(f"[DatabricksConnection] DATABRICKS_HOST raw: {databricks_host}")
-            print(f"[DatabricksConnection] Server hostname: {self.server_hostname}")
-            print(f"[DatabricksConnection] HTTP Path: {self.http_path}")
-            print(f"[DatabricksConnection] Full URL: https://{self.server_hostname}{self.http_path}")
-        else:
-            # Local: use secrets
-            self.server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
-            self.http_path = st.secrets.get("databricks", {}).get("http_path")
-            self.access_token = st.secrets.get("databricks", {}).get("access_token")
-            print(f"[DatabricksConnection] Running in Local mode")
-
-    def connect(self):
-        """Create SQL connection with appropriate auth"""
-        print(f"[DatabricksConnection] Attempting to connect...")
-        # Always need a token for SQL connector - get from SDK if not in secrets
-        token = self.access_token
-        if not token:
-            # Databricks Apps: get token from SDK's default auth
-            print(f"[DatabricksConnection] Getting token from SDK...")
-            from databricks.sdk import WorkspaceClient
-            w = WorkspaceClient()
-            print(f"[DatabricksConnection] SDK auth type: {w.config.auth_type}")
-            print(f"[DatabricksConnection] SDK client_id: {w.config.client_id[:20] if w.config.client_id else None}...")
-            token = w.config.token
-            if token:
-                print(f"[DatabricksConnection] Token obtained from SDK (length: {len(token)})")
-            else:
-                print(f"[DatabricksConnection] WARNING: No token from SDK, trying OAuth flow...")
-
-        print(f"[DatabricksConnection] Connecting to SQL warehouse...")
-        connection = sql.connect(
-            server_hostname=self.server_hostname,
-            http_path=self.http_path,
-            access_token=token,
-            _socket_timeout=30,  # Socket timeout: 30 seconds
-            _tls_socket_timeout=30,  # TLS handshake timeout: 30 seconds
-            http_timeout=60  # HTTP request timeout: 60 seconds
+    def execute_query(query):
+        """Execute SQL query using SDK"""
+        print(f"[SDK] Executing query via SDK StatementExecutionAPI...")
+        response = workspace_client.statement_execution.execute_statement(
+            warehouse_id=warehouse_id,
+            statement=query,
+            wait_timeout="30s"
         )
-        print(f"[DatabricksConnection] Connection established successfully")
-        return connection
+        print(f"[SDK] Query completed, status: {response.status.state}")
 
-# Initialize connection wrapper once at module level
-print(f"[APP] Initializing DatabricksConnection...")
-db_connection = DatabricksConnection()
-print(f"[APP] DatabricksConnection initialized")
+        # Convert SDK response to pandas DataFrame
+        if response.result and response.result.data_array:
+            columns = [col.name for col in response.manifest.schema.columns]
+            data = response.result.data_array
+            df = pd.DataFrame(data, columns=columns)
+            print(f"[SDK] Fetched {len(df)} rows")
+            return df
+        else:
+            print(f"[SDK] No data returned")
+            return pd.DataFrame()
+
+    def execute_insert(query):
+        """Execute INSERT query using SDK"""
+        print(f"[SDK] Executing INSERT via SDK...")
+        response = workspace_client.statement_execution.execute_statement(
+            warehouse_id=warehouse_id,
+            statement=query,
+            wait_timeout="30s"
+        )
+        print(f"[SDK] INSERT completed, status: {response.status.state}")
+
+else:
+    # Use SQL connector for localhost (requires PAT token)
+    print(f"[APP] Initializing SQL connector...")
+    server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
+    http_path = st.secrets.get("databricks", {}).get("http_path")
+    access_token = st.secrets.get("databricks", {}).get("access_token")
+    print(f"[APP] SQL connector configured")
+
+    def execute_query(query):
+        """Execute SQL query using SQL connector"""
+        print(f"[SQL] Executing query via SQL connector...")
+        connection = sql.connect(
+            server_hostname=server_hostname,
+            http_path=http_path,
+            access_token=access_token
+        )
+        cursor = connection.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        cursor.close()
+        connection.close()
+        df = pd.DataFrame(rows, columns=columns)
+        print(f"[SQL] Fetched {len(df)} rows")
+        return df
+
+    def execute_insert(query):
+        """Execute INSERT query using SQL connector"""
+        print(f"[SQL] Executing INSERT via SQL connector...")
+        connection = sql.connect(
+            server_hostname=server_hostname,
+            http_path=http_path,
+            access_token=access_token
+        )
+        cursor = connection.cursor()
+        cursor.execute(query)
+        cursor.close()
+        connection.close()
+        print(f"[SQL] INSERT completed")
 
 print(f"[APP] Setting page config...")
 st.set_page_config(
@@ -258,27 +279,15 @@ def get_predictions_for_review():
         LIMIT 50
     """
 
-    if USE_SQL_CONNECTOR:
-        # Use SQL connector (for local or Databricks Apps)
-        print(f"[get_predictions_for_review] Using SQL connector...")
-        connection = db_connection.connect()
-        cursor = connection.cursor()
-        print(f"[get_predictions_for_review] Executing query...")
-        cursor.execute(query)
-        print(f"[get_predictions_for_review] Fetching results...")
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        cursor.close()
-        connection.close()
-        print(f"[get_predictions_for_review] Query completed, {len(rows)} rows fetched")
-
-        df = pd.DataFrame(rows, columns=columns)
-    else:
-        # Use Spark (for Databricks Apps)
+    if IS_DATABRICKS_NOTEBOOK:
+        # Use Spark for notebooks
         print(f"[get_predictions_for_review] Using Spark...")
         spark_df = spark.sql(query)
         df = spark_df.toPandas()
         print(f"[get_predictions_for_review] Query completed, {len(df)} rows fetched")
+    else:
+        # Use SDK or SQL connector (both use execute_query helper)
+        df = execute_query(query)
 
     return df
 
@@ -324,34 +333,9 @@ def save_feedback(feedback_df, radiologist_id):
         return 0
 
     # Insert into feedback table
-    feedback_insert_df = pd.DataFrame(records)
-
-    if USE_SQL_CONNECTOR:
-        # Use SQL connector
-        connection = db_connection.connect()
-        cursor = connection.cursor()
-
-        for record in records:
-            insert_sql = f"""
-                INSERT INTO {FEEDBACK_TABLE} VALUES (
-                    '{record['feedback_id']}',
-                    '{record['prediction_id']}',
-                    '{record['timestamp']}',
-                    '{record['ground_truth']}',
-                    '{record['feedback_type']}',
-                    '{record['radiologist_id']}',
-                    '{record['confidence']}',
-                    '{record['feedback_source']}',
-                    '{record['notes']}'
-                )
-            """
-            cursor.execute(insert_sql)
-
-        cursor.close()
-        connection.close()
-    else:
-        # Use Spark
-        from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+    if IS_DATABRICKS_NOTEBOOK:
+        # Use Spark for notebooks
+        from pyspark.sql.types import StructType, StructField, StringType
 
         schema = StructType([
             StructField("feedback_id", StringType(), True),
@@ -367,6 +351,23 @@ def save_feedback(feedback_df, radiologist_id):
 
         spark_feedback_df = spark.createDataFrame(records, schema=schema)
         spark_feedback_df.write.mode('append').saveAsTable(FEEDBACK_TABLE)
+    else:
+        # Use SDK or SQL connector (both use execute_insert helper)
+        for record in records:
+            insert_sql = f"""
+                INSERT INTO {FEEDBACK_TABLE} VALUES (
+                    '{record['feedback_id']}',
+                    '{record['prediction_id']}',
+                    '{record['timestamp']}',
+                    '{record['ground_truth']}',
+                    '{record['feedback_type']}',
+                    '{record['radiologist_id']}',
+                    '{record['confidence']}',
+                    '{record['feedback_source']}',
+                    '{record['notes']}'
+                )
+            """
+            execute_insert(insert_sql)
 
     return len(records)
 
@@ -551,26 +552,8 @@ try:
             }
 
             # Save to database
-            if USE_SQL_CONNECTOR:
-                connection = db_connection.connect()
-                cursor = connection.cursor()
-                insert_sql = f"""
-                    INSERT INTO {FEEDBACK_TABLE} VALUES (
-                        '{record['feedback_id']}',
-                        '{record['prediction_id']}',
-                        '{record['timestamp']}',
-                        '{record['ground_truth']}',
-                        '{record['feedback_type']}',
-                        '{record['radiologist_id']}',
-                        '{record['confidence']}',
-                        '{record['feedback_source']}',
-                        '{record['notes']}'
-                    )
-                """
-                cursor.execute(insert_sql)
-                cursor.close()
-                connection.close()
-            else:
+            if IS_DATABRICKS_NOTEBOOK:
+                # Use Spark for notebooks
                 from pyspark.sql.types import StructType, StructField, StringType
                 schema = StructType([
                     StructField("feedback_id", StringType(), True),
@@ -585,6 +568,22 @@ try:
                 ])
                 spark_feedback_df = spark.createDataFrame([record], schema=schema)
                 spark_feedback_df.write.mode('append').saveAsTable(FEEDBACK_TABLE)
+            else:
+                # Use SDK or SQL connector (both use execute_insert helper)
+                insert_sql = f"""
+                    INSERT INTO {FEEDBACK_TABLE} VALUES (
+                        '{record['feedback_id']}',
+                        '{record['prediction_id']}',
+                        '{record['timestamp']}',
+                        '{record['ground_truth']}',
+                        '{record['feedback_type']}',
+                        '{record['radiologist_id']}',
+                        '{record['confidence']}',
+                        '{record['feedback_source']}',
+                        '{record['notes']}'
+                    )
+                """
+                execute_insert(insert_sql)
 
             # Show success toast
             st.toast(f"✅ Saved assessment for {row['prediction_id'][:16]}...", icon="✅")
