@@ -76,3 +76,13 @@ resource "databricks_grants" "feedback_app_bronze_metadata_table" {
     privileges = ["SELECT"]
   }
 }
+
+# Volume Grants - Allow app to READ xray_images volume
+resource "databricks_grants" "feedback_app_xray_volume" {
+  volume = "${databricks_catalog.healthcare.name}.${databricks_schema.bronze.name}.${databricks_volume.xray_images.name}"
+
+  grant {
+    principal  = "f2a69ee5-e2d8-490b-a551-fa91155e53ed"
+    privileges = ["READ_VOLUME"]
+  }
+}
