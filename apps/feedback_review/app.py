@@ -12,7 +12,7 @@ import uuid
 import os
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T19:40:29Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T19:41:54Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
