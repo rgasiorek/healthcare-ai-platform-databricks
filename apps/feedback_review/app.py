@@ -12,7 +12,7 @@ import uuid
 import os
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T15:10:08Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T15:13:54Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -74,15 +74,12 @@ if IS_DATABRICKS_APPS:
         )
         print(f"[SDK] Query completed, status: {response.status.state}")
 
-        if response.status.state == "FAILED":
-            # Try multiple ways to get error message
-            error_msg = "Unknown error"
-            if hasattr(response.status, 'error') and response.status.error:
-                error_msg = str(response.status.error)
+        from databricks.sdk.service.sql import StatementState
+        if response.status.state == StatementState.FAILED:
             print(f"[SDK] Query FAILED!")
-            print(f"[SDK] Error: {error_msg}")
-            print(f"[SDK] Full response status: {response.status}")
-            raise Exception(f"SQL query failed: {error_msg}")
+            if hasattr(response.status, 'error') and response.status.error:
+                print(f"[SDK] Error: {response.status.error}")
+            raise Exception(f"SQL query failed")
 
         # Convert SDK response to pandas DataFrame
         if response.result and response.result.data_array:
@@ -98,22 +95,23 @@ if IS_DATABRICKS_APPS:
     def execute_insert(query):
         """Execute INSERT query using SDK"""
         print(f"[SDK] Executing INSERT via SDK...")
-        print(f"[SDK] Query: {query[:200]}...")  # Log first 200 chars
+        print(f"[SDK] Query: {query[:200]}...")
         response = workspace_client.statement_execution.execute_statement(
             warehouse_id=warehouse_id,
             statement=query,
             wait_timeout="30s"
         )
         print(f"[SDK] INSERT completed, status: {response.status.state}")
-        if response.status.state == "FAILED":
-            # Try multiple ways to get error message
-            error_msg = "Unknown error"
+        print(f"[SDK] Status type: {type(response.status.state)}")
+        print(f"[SDK] Status value: {response.status.state.value if hasattr(response.status.state, 'value') else response.status.state}")
+
+        # Check if failed using enum comparison
+        from databricks.sdk.service.sql import StatementState
+        if response.status.state == StatementState.FAILED:
+            print(f"[SDK] !!!!! INSERT FAILED !!!!!")
             if hasattr(response.status, 'error') and response.status.error:
-                error_msg = str(response.status.error)
-            print(f"[SDK] INSERT FAILED!")
-            print(f"[SDK] Error: {error_msg}")
-            print(f"[SDK] Full response status: {response.status}")
-            raise Exception(f"SQL INSERT failed: {error_msg}")
+                print(f"[SDK] Error: {response.status.error}")
+            raise Exception(f"SQL INSERT failed")
 
 else:
     # Use SQL connector for localhost (requires PAT token)
