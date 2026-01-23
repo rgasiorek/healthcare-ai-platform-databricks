@@ -29,15 +29,15 @@ Deploy the app directly in your Databricks workspace via UI.
    - `app.yaml` (Databricks Apps config)
 
 2. **Deploy via Databricks UI**:
-   - Navigate to **Workspace** → **Apps** in Databricks UI
+   - Navigate to **Compute** → **Apps** in Databricks UI
    - Click **Create App**
    - Name: `radiologist-feedback-review`
-   - Upload the entire `apps/feedback_review` directory
+   - Source code: Upload or point to workspace path containing `apps/feedback_review` files
    - Databricks will read `app.yaml` and install dependencies from `requirements.txt`
    - Wait for app to deploy (~2-3 minutes)
 
 3. **Access the app**:
-   - URL will be: `https://<workspace>.cloud.databricks.com/apps/radiologist-feedback-review`
+   - URL will be shown in Apps UI after deployment
    - App runs with workspace authentication automatically
    - Uses Spark directly to access tables (no secrets needed)
 
