@@ -15,6 +15,36 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Prerequisites
+# MAGIC
+# MAGIC Before running this demo, ensure the following steps are completed:
+# MAGIC
+# MAGIC 1. **Data Ingested** - X-ray images uploaded to Unity Catalog
+# MAGIC    - Run: `/Shared/ingest-kaggle-xray-data` notebook
+# MAGIC    - Location: `notebooks/01_ingestion/ingest_kaggle_xray_data.py`
+# MAGIC
+# MAGIC 2. **Models Trained** - Both Keras and PyTorch models trained and registered
+# MAGIC    - Run: `/Shared/train-poc-model-remote-file` notebook (Keras)
+# MAGIC    - Run: `/Shared/train-pytorch-remote-file` notebook (PyTorch)
+# MAGIC    - Location: `notebooks/03_ml/train_poc_model_remote_file.py` and `train_pytorch_remote_file.py`
+# MAGIC
+# MAGIC 3. **Models Wrapped** - Inference tracking wrapper added to models
+# MAGIC    - Run: `/Shared/wrap-models-for-inference-tracking` notebook
+# MAGIC    - Location: `notebooks/03_ml/wrap_models_for_inference_tracking.py`
+# MAGIC
+# MAGIC 4. **Model Serving Deployed** - A/B test endpoint deployed via Terraform
+# MAGIC    - Endpoint: `pneumonia-classifier-ab-test`
+# MAGIC    - Run: `cd terraform && terraform apply`
+# MAGIC    - Reference: `terraform/databricks/endpoints.tf`
+# MAGIC
+# MAGIC 5. **Feedback App Running** - Radiologist feedback review app deployed
+# MAGIC    - App: `radiologist-feedback-review`
+# MAGIC    - Deploy: `databricks apps deploy radiologist-feedback-review`
+# MAGIC    - Reference: `README.md` in `apps/feedback_review/` directory
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Setup
 
 # COMMAND ----------

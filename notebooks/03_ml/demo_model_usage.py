@@ -15,6 +15,26 @@
 # MAGIC - See practical examples of both approaches
 
 # COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Prerequisites
+# MAGIC
+# MAGIC Before running this demo, ensure the following steps are completed:
+# MAGIC
+# MAGIC 1. **Data Ingested** - X-ray images uploaded to Unity Catalog
+# MAGIC    - Run: `/Shared/ingest-kaggle-xray-data` notebook
+# MAGIC    - Location: `notebooks/01_ingestion/ingest_kaggle_xray_data.py`
+# MAGIC
+# MAGIC 2. **POC Model Trained** - Simple Keras model trained and registered
+# MAGIC    - Run: `/Shared/train-poc-model` notebook
+# MAGIC    - Location: `notebooks/03_ml/train_poc_model.py`
+# MAGIC
+# MAGIC 3. **Model Serving Deployed** - POC endpoint deployed via Terraform
+# MAGIC    - Endpoint: `pneumonia-poc-classifier`
+# MAGIC    - Run: `cd terraform && terraform apply`
+# MAGIC    - Reference: `terraform/databricks/endpoints.tf`
+
+# COMMAND ----------
 # MAGIC %md
 # MAGIC ## Setup: Install Dependencies and Load Sample Data
 
