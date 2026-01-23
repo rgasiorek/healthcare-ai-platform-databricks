@@ -28,12 +28,13 @@ Deploy the app directly in your Databricks workspace.
    - Navigate to **Compute** → **Apps**
    - Click **Create custom app**
    - Name: `radiologist-feedback-review`
-   - The UI will show deployment instructions (follow steps 2-5 below)
+   - The UI will show deployment instructions (follow steps 2-4 below)
 
-2. **Configure credentials in `app.yaml`**:
-   - Edit `apps/feedback_review/app.yaml`
-   - Replace `YOUR_ACCESS_TOKEN_HERE` with your Databricks access token
-   - Generate token: **User Settings** → **Developer** → **Access Tokens** → **Generate New Token**
+2. **Grant app permissions** (in Databricks UI):
+   - After creating the app, configure which resources it can access:
+     - SQL Warehouse: `healthcare-warehouse` (for querying tables)
+     - Unity Catalog: `healthcare_catalog_dev` schema (read/write access to gold and bronze tables)
+   - The app will use its service principal identity to access these resources
 
 3. **Sync app files to workspace**:
    ```bash
@@ -59,6 +60,8 @@ Deploy the app directly in your Databricks workspace.
    - URL shown in the UI after deployment
    - Or check: `databricks apps get radiologist-feedback-review`
 
+**Note**: The app uses Databricks' built-in authentication - no manual token configuration needed! It automatically authenticates using its service principal identity.
+
 **Troubleshooting** (from app logs):
 - **Missing package**: Add to `requirements.txt`
 - **Permissions issue**: Give service principal access to Unity Catalog tables
@@ -67,9 +70,9 @@ Deploy the app directly in your Databricks workspace.
 
 **Benefits:**
 - ✅ Runs inside Databricks (no external hosting)
-- ✅ Authenticated automatically via workspace
-- ✅ Direct Spark access to tables
-- ✅ No secrets management needed
+- ✅ Authenticated automatically via service principal
+- ✅ Resource permissions managed in UI
+- ✅ No manual token configuration needed
 - ✅ Auto-sync during development with `--watch`
 
 ---

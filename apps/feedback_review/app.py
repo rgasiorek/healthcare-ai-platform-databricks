@@ -34,12 +34,28 @@ CATALOG = "healthcare_catalog_dev"
 PREDICTIONS_TABLE = f"{CATALOG}.gold.pneumonia_predictions"
 FEEDBACK_TABLE = f"{CATALOG}.gold.prediction_feedback"
 
-# Helper function to get Databricks credentials (env vars or secrets)
+# Helper function to get Databricks credentials
 def get_databricks_credentials():
-    """Get Databricks credentials from environment variables (Apps) or secrets (local)"""
-    server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME") or st.secrets.get("databricks", {}).get("server_hostname")
-    http_path = os.getenv("DATABRICKS_HTTP_PATH") or st.secrets.get("databricks", {}).get("http_path")
-    access_token = os.getenv("DATABRICKS_TOKEN") or st.secrets.get("databricks", {}).get("access_token")
+    """
+    Get Databricks credentials:
+    - Databricks Apps: Uses default auth (service principal), reads from secrets for SQL warehouse path
+    - Local: Uses secrets.toml
+    """
+    # Check if running in Databricks Apps environment
+    is_databricks_app = os.getenv("DATABRICKS_RUNTIME_VERSION") is None and os.getenv("DB_IS_DRIVER") is not None
+
+    if is_databricks_app:
+        # Databricks Apps: use default authentication (no token needed)
+        # SQL warehouse info from environment or default
+        server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME", "dbc-68a1cdfa-43b8.cloud.databricks.com")
+        http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044")
+        access_token = None  # Will use default auth
+    else:
+        # Local: use secrets
+        server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
+        http_path = st.secrets.get("databricks", {}).get("http_path")
+        access_token = st.secrets.get("databricks", {}).get("access_token")
+
     return server_hostname, http_path, access_token
 
 st.set_page_config(
@@ -81,11 +97,11 @@ if "image" in query_params:
 
             if USE_SQL_CONNECTOR:
                 server_hostname, http_path, access_token = get_databricks_credentials()
-                connection = sql.connect(
-                    server_hostname=server_hostname,
-                    http_path=http_path,
-                    access_token=access_token
-                )
+                # Use explicit token (local) or default auth (Databricks Apps)
+                if access_token:
+                    connection = sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
+                else:
+                    connection = sql.connect(server_hostname=server_hostname, http_path=http_path)
                 cursor = connection.cursor()
                 cursor.execute(lookup_query)
                 result = cursor.fetchone()
@@ -119,15 +135,16 @@ if "image" in query_params:
                 # In Databricks Apps: use default auth
                 w = WorkspaceClient()
             else:
-                # Running locally or Databricks Apps: use credentials from env vars or secrets
+                # Running locally or Databricks Apps
                 server_hostname, _, access_token = get_databricks_credentials()
-                # Extract workspace host from SQL warehouse hostname (e.g., "dbc-xxx.cloud.databricks.com")
-                workspace_host = server_hostname.split('/')[0] if '/' in server_hostname else server_hostname
 
-                w = WorkspaceClient(
-                    host=f"https://{workspace_host}",
-                    token=access_token
-                )
+                if access_token:
+                    # Local: use explicit credentials
+                    workspace_host = server_hostname.split('/')[0] if '/' in server_hostname else server_hostname
+                    w = WorkspaceClient(host=f"https://{workspace_host}", token=access_token)
+                else:
+                    # Databricks Apps: use default authentication
+                    w = WorkspaceClient()
 
             file_content = w.files.download(clean_path).contents.read()
 
@@ -195,11 +212,20 @@ def get_predictions_for_review():
     if USE_SQL_CONNECTOR:
         # Use SQL connector (for local or Databricks Apps)
         server_hostname, http_path, access_token = get_databricks_credentials()
-        connection = sql.connect(
-            server_hostname=server_hostname,
-            http_path=http_path,
-            access_token=access_token
-        )
+
+        # Connect with explicit token (local) or default auth (Databricks Apps)
+        if access_token:
+            connection = sql.connect(
+                server_hostname=server_hostname,
+                http_path=http_path,
+                access_token=access_token
+            )
+        else:
+            # Databricks Apps: use default authentication
+            connection = sql.connect(
+                server_hostname=server_hostname,
+                http_path=http_path
+            )
         cursor = connection.cursor()
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -261,11 +287,11 @@ def save_feedback(feedback_df, radiologist_id):
 
     if USE_SQL_CONNECTOR:
         # Use SQL connector
-        connection = sql.connect(
-            server_hostname=st.secrets["databricks"]["server_hostname"],
-            http_path=st.secrets["databricks"]["http_path"],
-            access_token=st.secrets["databricks"]["access_token"]
-        )
+        server_hostname, http_path, access_token = get_databricks_credentials()
+        if access_token:
+            connection = sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
+        else:
+            connection = sql.connect(server_hostname=server_hostname, http_path=http_path)
         cursor = connection.cursor()
 
         for record in records:
@@ -484,11 +510,11 @@ try:
             # Save to database
             if USE_SQL_CONNECTOR:
                 server_hostname, http_path, access_token = get_databricks_credentials()
-                connection = sql.connect(
-                    server_hostname=server_hostname,
-                    http_path=http_path,
-                    access_token=access_token
-                )
+                # Use explicit token (local) or default auth (Databricks Apps)
+                if access_token:
+                    connection = sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
+                else:
+                    connection = sql.connect(server_hostname=server_hostname, http_path=http_path)
                 cursor = connection.cursor()
                 insert_sql = f"""
                     INSERT INTO {FEEDBACK_TABLE} VALUES (
