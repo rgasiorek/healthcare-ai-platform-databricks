@@ -27,7 +27,6 @@ except:
 # Detect environment
 IS_DATABRICKS_APPS = os.getenv("DATABRICKS_HOST") is not None
 IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
-USE_SQL_CONNECTOR = not IS_DATABRICKS_APPS and not IS_DATABRICKS_NOTEBOOK
 
 print(f"========================================")
 print(f"[APP] Starting Radiologist Feedback App")
