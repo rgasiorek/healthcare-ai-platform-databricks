@@ -8,30 +8,39 @@ import pandas as pd
 from datetime import datetime
 import uuid
 
-# Detect if running in Databricks Apps (use Spark) or locally (use SQL connector)
+# Detect environment and choose connection method
 import os
 
-# Check if running in Databricks environment
-IS_DATABRICKS = os.path.exists('/databricks/spark') or 'DATABRICKS_RUNTIME_VERSION' in os.environ
+# Databricks Apps doesn't have Spark - always use SQL connector for Apps
+# Only use Spark when explicitly running in notebooks/clusters
+IS_DATABRICKS_NOTEBOOK = os.path.exists('/databricks/spark') and 'DATABRICKS_RUNTIME_VERSION' in os.environ
 
-if IS_DATABRICKS:
-    # Running in Databricks Apps - use Spark directly
+if IS_DATABRICKS_NOTEBOOK:
+    # Running in Databricks notebook/cluster - use Spark directly
     USE_SQL_CONNECTOR = False
     from pyspark.sql import SparkSession
     spark = SparkSession.builder.getOrCreate()
 else:
-    # Running locally - use SQL connector
+    # Running locally or in Databricks Apps - use SQL connector
     try:
         from databricks import sql
         USE_SQL_CONNECTOR = True
     except ImportError:
-        st.error("❌ Running locally but databricks-sql-connector not installed. Run: pip install databricks-sql-connector")
+        st.error("❌ databricks-sql-connector not installed. Run: pip install databricks-sql-connector")
         st.stop()
 
 # Configuration
 CATALOG = "healthcare_catalog_dev"
 PREDICTIONS_TABLE = f"{CATALOG}.gold.pneumonia_predictions"
 FEEDBACK_TABLE = f"{CATALOG}.gold.prediction_feedback"
+
+# Helper function to get Databricks credentials (env vars or secrets)
+def get_databricks_credentials():
+    """Get Databricks credentials from environment variables (Apps) or secrets (local)"""
+    server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME") or st.secrets.get("databricks", {}).get("server_hostname")
+    http_path = os.getenv("DATABRICKS_HTTP_PATH") or st.secrets.get("databricks", {}).get("http_path")
+    access_token = os.getenv("DATABRICKS_TOKEN") or st.secrets.get("databricks", {}).get("access_token")
+    return server_hostname, http_path, access_token
 
 st.set_page_config(
     page_title="Radiologist Feedback Review",
@@ -71,10 +80,11 @@ if "image" in query_params:
             """
 
             if USE_SQL_CONNECTOR:
+                server_hostname, http_path, access_token = get_databricks_credentials()
                 connection = sql.connect(
-                    server_hostname=st.secrets["databricks"]["server_hostname"],
-                    http_path=st.secrets["databricks"]["http_path"],
-                    access_token=st.secrets["databricks"]["access_token"]
+                    server_hostname=server_hostname,
+                    http_path=http_path,
+                    access_token=access_token
                 )
                 cursor = connection.cursor()
                 cursor.execute(lookup_query)
@@ -109,14 +119,14 @@ if "image" in query_params:
                 # In Databricks Apps: use default auth
                 w = WorkspaceClient()
             else:
-                # Running locally: use credentials from secrets
+                # Running locally or Databricks Apps: use credentials from env vars or secrets
+                server_hostname, _, access_token = get_databricks_credentials()
                 # Extract workspace host from SQL warehouse hostname (e.g., "dbc-xxx.cloud.databricks.com")
-                sql_hostname = st.secrets["databricks"]["server_hostname"]
-                workspace_host = sql_hostname.split('/')[0] if '/' in sql_hostname else sql_hostname
+                workspace_host = server_hostname.split('/')[0] if '/' in server_hostname else server_hostname
 
                 w = WorkspaceClient(
                     host=f"https://{workspace_host}",
-                    token=st.secrets["databricks"]["access_token"]
+                    token=access_token
                 )
 
             file_content = w.files.download(clean_path).contents.read()
@@ -183,11 +193,12 @@ def get_predictions_for_review():
     """
 
     if USE_SQL_CONNECTOR:
-        # Use SQL connector (for local Streamlit app)
+        # Use SQL connector (for local or Databricks Apps)
+        server_hostname, http_path, access_token = get_databricks_credentials()
         connection = sql.connect(
-            server_hostname=st.secrets["databricks"]["server_hostname"],
-            http_path=st.secrets["databricks"]["http_path"],
-            access_token=st.secrets["databricks"]["access_token"]
+            server_hostname=server_hostname,
+            http_path=http_path,
+            access_token=access_token
         )
         cursor = connection.cursor()
         cursor.execute(query)
@@ -472,10 +483,11 @@ try:
 
             # Save to database
             if USE_SQL_CONNECTOR:
+                server_hostname, http_path, access_token = get_databricks_credentials()
                 connection = sql.connect(
-                    server_hostname=st.secrets["databricks"]["server_hostname"],
-                    http_path=st.secrets["databricks"]["http_path"],
-                    access_token=st.secrets["databricks"]["access_token"]
+                    server_hostname=server_hostname,
+                    http_path=http_path,
+                    access_token=access_token
                 )
                 cursor = connection.cursor()
                 insert_sql = f"""
