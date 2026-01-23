@@ -33,7 +33,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:58:42Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:59:35Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -68,6 +68,11 @@ if IS_DATABRICKS_APPS:
         )
         print(f"[SDK] Query completed, status: {response.status.state}")
 
+        if response.status.state == "FAILED":
+            error_msg = response.status.error.message if response.status.error else "Unknown error"
+            print(f"[SDK] Query FAILED: {error_msg}")
+            raise Exception(f"SQL query failed: {error_msg}")
+
         # Convert SDK response to pandas DataFrame
         if response.result and response.result.data_array:
             columns = [col.name for col in response.manifest.schema.columns]
@@ -88,6 +93,10 @@ if IS_DATABRICKS_APPS:
             wait_timeout="30s"
         )
         print(f"[SDK] INSERT completed, status: {response.status.state}")
+        if response.status.state == "FAILED":
+            error_msg = response.status.error.message if response.status.error else "Unknown error"
+            print(f"[SDK] INSERT FAILED: {error_msg}")
+            raise Exception(f"SQL INSERT failed: {error_msg}")
 
 else:
     # Use SQL connector for localhost (requires PAT token)
