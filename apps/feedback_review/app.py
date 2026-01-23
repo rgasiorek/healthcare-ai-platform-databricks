@@ -231,7 +231,7 @@ if "image" in query_params:
 
             # Display image
             img = Image.open(BytesIO(file_content))
-            st.image(img, caption=filename, use_column_width=True)
+            st.image(img, caption=filename, use_container_width=True)
 
     except Exception as e:
         st.error(f"Failed to load image: {e}")
