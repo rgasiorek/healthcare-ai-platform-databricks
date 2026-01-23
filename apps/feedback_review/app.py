@@ -30,7 +30,7 @@ else:
         st.stop()
 
 # Version info - update this with each deployment
-APP_VERSION = "2026-01-23T14:47:28Z"  # ISO timestamp of last deployment
+APP_VERSION = "2026-01-23T14:48:57Z"  # ISO timestamp of last deployment
 
 # Try to get git commit hash if available
 try:
@@ -62,8 +62,10 @@ class DatabricksConnection:
             self.http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/a823ad30eae0e044")
             self.access_token = None  # Will use default service principal auth
             print(f"[DatabricksConnection] Running in Databricks Apps mode")
-            print(f"[DatabricksConnection] Server: {self.server_hostname}")
+            print(f"[DatabricksConnection] DATABRICKS_HOST raw: {databricks_host}")
+            print(f"[DatabricksConnection] Server hostname: {self.server_hostname}")
             print(f"[DatabricksConnection] HTTP Path: {self.http_path}")
+            print(f"[DatabricksConnection] Full URL: https://{self.server_hostname}{self.http_path}")
         else:
             # Local: use secrets
             self.server_hostname = st.secrets.get("databricks", {}).get("server_hostname")
