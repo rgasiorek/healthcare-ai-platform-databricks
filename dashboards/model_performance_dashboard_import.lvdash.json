@@ -255,6 +255,7 @@
                     "fieldName": "image_link",
                     "displayName": "View X-ray",
                     "booleanValues": ["false", "true"],
+                    "linkTextExpression": "'View'",
                     "linkUrlExpression": "`image_link`"
                   }
                 ]
