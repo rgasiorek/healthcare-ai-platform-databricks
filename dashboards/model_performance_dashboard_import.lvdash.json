@@ -30,7 +30,7 @@
         "  p.predicted_at,\n",
         "  ROUND(p.prediction_probability, 3) as ai_confidence,\n",
         "  CASE WHEN logs.model_name LIKE '%pytorch%' THEN 'PyTorch' WHEN logs.model_name LIKE '%classifier%' AND logs.model_name NOT LIKE '%pytorch%' THEN 'Keras' ELSE logs.model_name END as model_name,\n",
-        "  CONCAT('?image=', p.image_id) as image_link\n",
+        "  CONCAT('https://dbc-68a1cdfa-43b8.cloud.databricks.com/apps/radiologist-feedback-review?image=', p.image_id) as image_link\n",
         "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
         "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
         "INNER JOIN (\n",
