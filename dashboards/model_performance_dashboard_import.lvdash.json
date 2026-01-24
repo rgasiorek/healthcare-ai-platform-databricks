@@ -30,9 +30,10 @@
         "  p.predicted_at,\n",
         "  ROUND(p.prediction_probability, 3) as ai_confidence,\n",
         "  CASE WHEN logs.model_name LIKE '%pytorch%' THEN 'PyTorch' WHEN logs.model_name LIKE '%classifier%' AND logs.model_name NOT LIKE '%pytorch%' THEN 'Keras' ELSE logs.model_name END as model_name,\n",
-        "  CONCAT('https://radiologist-feedback-review-3720263199172428.aws.databricksapps.com/?image=', p.image_id) as image_link\n",
+        "  bronze.file_path as image_path\n",
         "FROM healthcare_catalog_dev.gold.prediction_feedback f\n",
         "INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id\n",
+        "INNER JOIN healthcare_catalog_dev.bronze.kaggle_xray_metadata bronze ON p.image_id = bronze.image_id\n",
         "INNER JOIN (\n",
         "  SELECT request_metadata['model_name'] as model_name, get_json_object(response, '$.predictions[0][0]') as pred_prob, timestamp_ms \n",
         "  FROM healthcare_catalog_dev.gold.pneumonia_classifier_payload WHERE status_code = 200\n",
@@ -218,8 +219,8 @@
                       "expression": "`model_name`"
                     },
                     {
-                      "name": "image_link",
-                      "expression": "`image_link`"
+                      "name": "image_path",
+                      "expression": "`image_path`"
                     }
                   ],
                   "disaggregated": false
@@ -252,11 +253,12 @@
                     "booleanValues": ["false", "true"]
                   },
                   {
-                    "fieldName": "image_link",
-                    "displayName": "View X-ray",
+                    "fieldName": "image_path",
+                    "displayName": "X-ray Image",
                     "booleanValues": ["false", "true"],
-                    "linkTextExpression": "'View'",
-                    "linkUrlExpression": "`image_link`"
+                    "displayType": "image",
+                    "imageUrlExpression": "`image_path`",
+                    "imageWidth": 50
                   }
                 ]
               },
