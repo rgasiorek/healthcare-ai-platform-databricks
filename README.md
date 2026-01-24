@@ -1,69 +1,75 @@
 # Healthcare AI Platform - Databricks on AWS
 
-Production-ready X-ray pneumonia classification platform using Databricks Unity Catalog, Delta Lake, and Terraform Infrastructure as Code.
+End-to-end demonstration of Databricks capabilities on AWS, showcasing a complete MLOps platform for healthcare AI with pneumonia classification from chest X-rays.
 
-**Built with AI-Assisted Development**: This project showcases not just a healthcare AI platform, but how **Claude Code** (AI assistant with direct GitHub, AWS, and Databricks access) can accelerate development for staff engineers.
+## Project Goals
 
-## Overview
+### Primary Goal: Comprehensive Databricks Platform Exercise
 
-This project demonstrates a complete production-ready MLOps platform for healthcare AI, featuring:
-- **End-to-End ML Pipeline** - Train → Deploy → Monitor → Improve
-- **A/B Testing** - Champion/Challenger pattern with traffic splitting
-- **Feedback Loop** - Real-world accuracy tracking with ground truth
-- **Unity Catalog** - Unified governance for data and AI assets
-- **Delta Lake** - ACID-compliant lakehouse storage on S3
-- **Model Serving** - REST API endpoints for real-time predictions
-- **MLflow** - Experiment tracking and model registry
-- **Terraform** - Infrastructure as Code for reproducible deployments
+This project exercises the **complete spectrum of Databricks capabilities** in a single cohesive platform:
 
-## AI-Assisted Development with Claude Code
+**Data Engineering & Lakehouse:**
+- **Data Ingestion** - Automated Kaggle dataset download via Databricks Jobs
+- **Unity Catalog** - Three-tier namespace (catalog → schema → table/volume) with governance
+- **Delta Lake** - ACID transactions, time travel, change data feed on S3
+- **Medallion Architecture** - Bronze (raw) → Silver (validated) → Gold (business-ready)
+- **External Volumes** - Unity Catalog managed volumes for unstructured data (JPEG images)
 
-### The Real Innovation: Zero-Click Automation
+**ML & MLOps:**
+- **Model Training** - Distributed training with TensorFlow (Keras) and PyTorch
+- **MLflow Experiments** - Experiment tracking, model versioning, hyperparameter logging
+- **Model Registry** - Unity Catalog-backed model registry (UC models, not workspace models)
+- **Model Serving** - REST API endpoints with A/B testing (Champion vs Challenger, 50/50 traffic split)
+- **Inference Logging** - Auto-capture prediction payloads for monitoring and debugging
 
-**Project Goal**: Eliminate clicking in AWS/Databricks consoles - achieve 100% automation for development workflow.
+**Analytics & Applications:**
+- **SQL Warehouses** - Serverless compute for BI and analytics
+- **Lakeview Dashboards** - 7-widget performance dashboard with ML metrics, confusion matrices, radiologist agreement analysis
+- **Databricks Apps** - Streamlit feedback review app hosted in Databricks workspace
 
-This project demonstrates how **Claude Code with direct system access** (GitHub CLI, AWS CLI, Databricks CLI, Terraform) enables:
+**Serving Diverse Stakeholders:**
+- **ML Analysts** - Experiment tracking, model comparison, performance metrics
+- **ML Engineers** - Model training notebooks, serving endpoint deployment, inference monitoring
+- **Data Engineers** - ETL pipelines, data quality, medallion architecture
+- **MLOps Engineers** - A/B testing infrastructure, feedback loops, model governance
+- **BI/Data Analysts** - SQL-based dashboards, business metrics, radiologist performance tracking
+- **Senior Leadership** - High-level KPIs, model ROI, accuracy trends over time
+- **External Vendors** - REST API integration, feedback submission workflows
 
-### 1. Full SDLC Automation
-- **Plan**: GitHub issues created from conversations
-- **Build**: Terraform + notebooks written with proper context
-- **Deploy**: Direct execution to AWS and Databricks
-- **Test**: AI runs tests OR guides user with closed-ended test scenarios matching requirements
-- **Document**: README, code comments, presentation generated
-- **Maintain**: Issue tracking, commits, closures automated
+### Secondary Goal: LLM-Driven Development Without UI Clicking
 
-**Result**: Zero manual clicking in cloud consoles. Testing either automated or guided with clear pass/fail criteria. Everything versioned, reproducible, documented.
+**"Make it without clicking around, only with LLM agent with agile processes in place"**
 
-### 2. MLOps Experimentation Enabled
-- Rapidly test different patterns (A/B testing, feedback loops)
-- Try multiple frameworks (TensorFlow vs PyTorch) with minimal friction
-- Iterate on architecture decisions with immediate deployment
-- Learn Databricks features through AI explanations
+This project was built entirely through conversation with **Claude Code** (AI assistant with CLI access), demonstrating:
 
-**Result**: Staff engineer experiments with production MLOps patterns in days, not months.
+**Terraform as Formal Language for LLM:**
+- Terraform serves dual purpose: Infrastructure as Code + AI context
+- LLM translates natural language requirements → Terraform HCL
+- AI reads existing `.tf` files → generates correct table schemas, column names, resource dependencies
+- No trial-and-error: AI understands Unity Catalog structure from Terraform state
 
-### 3. Terraform as AI Context
-**Dual purpose**:
-- Traditional: Infrastructure as Code (reproducibility)
-- Novel: Perfect structured context for AI (reads schemas, writes correct code)
+**Virtual Junior Developer in CICD:**
+- LLM authenticates to GitHub CLI, commits code, creates issues, tracks tickets
+- Works within real agile processes: tickets → commits → code reviews → testing
+- Tracks all work via [GitHub Issues](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues)
+- Plugged into CICD: Terraform plans, git workflows, deployment automation
 
-**Result**: No trial-and-error. AI reads `catalog.tf` → writes queries with correct column names first try.
+**Zero-Click Automation:**
+- 100% automation: conversation → code → deployed infrastructure
+- No AWS console clicking, no Databricks UI clicking for infrastructure
+- Human role: strategic decisions, architecture approval, domain knowledge
+- AI role: execution, documentation, ticket tracking, code generation
 
-### The Strategic Shift
+**Result**: Staff engineer experiments with production MLOps patterns in days, not months
 
-```
-TRADITIONAL:                    AI-ASSISTED:
-├─ Click AWS console        →  Terraform apply
-├─ Upload files manually    →  Automated deployment
-├─ Write docs later         →  Auto-generated docs
-├─ Context lost             →  Git + Terraform preserve all
-└─ Weeks to MVP             →  Days to MVP
-```
+## Architecture Overview
 
-**Human role**: Strategic decisions, architecture, approval, domain knowledge
-**AI role**: SDLC automation, zero-click execution, complete documentation
-
-**The goal was zero clicking. Achieved: 100% automation from conversation to deployed infrastructure.**
+This platform demonstrates a complete production-ready MLOps system with:
+- **End-to-End ML Pipeline** - Data ingestion → Training → Serving → Monitoring → Feedback
+- **A/B Testing Infrastructure** - Champion/Challenger pattern with traffic splitting
+- **Feedback Loop** - Real-world accuracy tracking with radiologist ground truth
+- **Comprehensive Dashboards** - 7 widgets tracking model performance, confusion matrices, radiologist agreement
+- **Production-Grade Governance** - Unity Catalog access control, Delta Lake ACID transactions
 
 ## Architecture
 
@@ -435,30 +441,9 @@ SQL-based dashboard for real-time model performance monitoring:
 
 ## Project Tracking
 
-All work tracked via GitHub Issues:
+All work tracked via [GitHub Issues](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues).
 
-**Infrastructure & Data**:
-- ✅ [Issue #1](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/1): Setup AWS integration for Unity Catalog
-- ✅ [Issue #2](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/2): Implement production-ready Delta tables
-- ✅ [Issue #3](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/3): Ingest Kaggle X-ray data into Bronze
-
-**ML Pipeline**:
-- ✅ [Issue #6](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/6): Implement ML model POC (TensorFlow)
-- ✅ [Issue #7](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/7): Fix serverless endpoint cold start timeout
-- ✅ [Issue #8](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/8): Fix REST API payload format for Keras
-- ✅ [Issue #9](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/9): Add PyTorch model for framework comparison
-- ✅ [Issue #10](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/10): Fix Unity Catalog model signature requirement
-
-**A/B Testing & Feedback Loop**:
-- ✅ [Issue #11](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/11): Implement Champion/Challenger A/B testing
-- ✅ [Issue #12](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/12): Create feedback infrastructure tables
-- ✅ [Issue #13](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/13): Build BentoML-style feedback collector API
-- ✅ [Issue #14](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/14): Create monitoring dashboard for model comparison
-- ✅ [Issue #15](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/15): Update demo notebook with prediction tracking
-- ✅ [Issue #16](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/16): Clean up end-to-end demo notebook
-- ✅ [Issue #17](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/17): Create model comparison dashboard with ML metrics
-- ✅ [Issue #18](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/18): Remove unused notebooks
-- ✅ [Issue #19](https://github.com/rgasiorek/healthcare-ai-platform-databricks/issues/19): Update README files to reflect simplifications
+Development followed agile methodology with ticket-driven workflow managed entirely through Claude Code CLI integration.
 
 ## Exploring the Platform
 
