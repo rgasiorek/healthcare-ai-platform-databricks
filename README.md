@@ -539,6 +539,17 @@ DESCRIBE HISTORY healthcare_catalog_dev.bronze.kaggle_xray_metadata;
 - [x] Monitoring dashboard for model comparison
 
 **Future Enhancements**:
+
+**Major TODO - LLM Platform Expansion**:
+- [ ] **Expand Databricks coverage towards LLM capabilities** to confirm what Databricks can do for GenAI workloads:
+  - [ ] LLM integrations (OpenAI, Anthropic, Foundation Models)
+  - [ ] LLM experiment tracking with MLflow (prompt tracking, token usage, response quality metrics)
+  - [ ] LLM model serving (Foundation Model APIs, fine-tuned model hosting)
+  - [ ] RAG (Retrieval-Augmented Generation) with Vector Search and Unity Catalog
+  - [ ] Prompt engineering workflows and evaluation frameworks
+  - [ ] LLM observability and guardrails (toxicity detection, PII filtering)
+
+**Traditional ML Enhancements**:
 - [ ] Bronze → Silver transformation with data quality checks
 - [ ] Feature engineering pipeline
 - [ ] Transfer learning with EfficientNet/ResNet
@@ -546,7 +557,6 @@ DESCRIBE HISTORY healthcare_catalog_dev.bronze.kaggle_xray_metadata;
 - [ ] CI/CD pipeline with GitHub Actions
 - [ ] Automated model retraining on feedback
 - [ ] Real-time alerting for model drift
-- [ ] BI dashboard with Databricks SQL
 - [ ] Multi-class classification (normal/bacterial/viral)
 
 ## Troubleshooting
