@@ -199,30 +199,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "false_positives_ds",
-                  "fields": [
-                    {
-                      "name": "image_id",
-                      "expression": "`image_id`"
-                    },
-                    {
-                      "name": "predicted_at",
-                      "expression": "`predicted_at`"
-                    },
-                    {
-                      "name": "ai_confidence",
-                      "expression": "`ai_confidence`"
-                    },
-                    {
-                      "name": "model_name",
-                      "expression": "`model_name`"
-                    },
-                    {
-                      "name": "image_link",
-                      "expression": "`image_link`"
-                    }
-                  ],
-                  "disaggregated": false
+                  "query": "SELECT f.feedback_id, p.image_id, p.predicted_at, ROUND(p.prediction_probability, 3) as ai_confidence, CASE WHEN logs.model_name LIKE '%pytorch%' THEN 'PyTorch' WHEN logs.model_name LIKE '%classifier%' AND logs.model_name NOT LIKE '%pytorch%' THEN 'Keras' ELSE logs.model_name END as model_name, CONCAT('?image=', p.image_id) as image_link FROM healthcare_catalog_dev.gold.prediction_feedback f INNER JOIN healthcare_catalog_dev.gold.pneumonia_predictions p ON f.prediction_id = p.prediction_id INNER JOIN (SELECT request_metadata['model_name'] as model_name, get_json_object(response, '$.predictions[0][0]') as pred_prob, timestamp_ms FROM healthcare_catalog_dev.gold.pneumonia_classifier_payload WHERE status_code = 200) logs ON CAST(p.prediction_probability AS STRING) = CAST(logs.pred_prob AS STRING) AND ABS(unix_timestamp(p.predicted_at) * 1000 - logs.timestamp_ms) < 5000 WHERE f.feedback_type = 'false-positive' ORDER BY f.timestamp DESC LIMIT 10"
                 }
               }
             ],
@@ -491,26 +468,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "radiologist_agreement_ds",
-                  "fields": [
-                    {
-                      "name": "radiologist_id",
-                      "expression": "`radiologist_id`"
-                    },
-                    {
-                      "name": "agreement_pct",
-                      "expression": "`agreement_pct`"
-                    },
-                    {
-                      "name": "total_reviews",
-                      "expression": "`total_reviews`"
-                    },
-                    {
-                      "name": "disagreements",
-                      "expression": "`disagreements`"
-                    }
-                  ],
-                  "disaggregated": false
+                  "query": "SELECT COALESCE(f.radiologist_id, 'Unknown') as radiologist_id, ROUND(SUM(CASE WHEN f.feedback_type IN ('true-positive', 'true-negative') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as agreement_pct, COUNT(*) as total_reviews, SUM(CASE WHEN f.feedback_type IN ('false-positive', 'false-negative') THEN 1 ELSE 0 END) as disagreements FROM healthcare_catalog_dev.gold.prediction_feedback f WHERE f.radiologist_id IS NOT NULL GROUP BY COALESCE(f.radiologist_id, 'Unknown') ORDER BY agreement_pct DESC"
                 }
               }
             ],
